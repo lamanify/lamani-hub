@@ -14,240 +14,171 @@ export type Database = {
   }
   public: {
     Tables: {
-      audit_logs: {
+      audit_log: {
         Row: {
           action: string
-          clinic_id: string | null
           created_at: string
+          details: Json | null
           id: string
-          new_values: Json | null
-          old_values: Json | null
-          record_id: string | null
-          table_name: string
+          resource_id: string | null
+          tenant_id: string
           user_id: string | null
         }
         Insert: {
           action: string
-          clinic_id?: string | null
           created_at?: string
+          details?: Json | null
           id?: string
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name: string
+          resource_id?: string | null
+          tenant_id: string
           user_id?: string | null
         }
         Update: {
           action?: string
-          clinic_id?: string | null
           created_at?: string
+          details?: Json | null
           id?: string
-          new_values?: Json | null
-          old_values?: Json | null
-          record_id?: string | null
-          table_name?: string
+          resource_id?: string | null
+          tenant_id?: string
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "audit_logs_clinic_id_fkey"
-            columns: ["clinic_id"]
+            foreignKeyName: "audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      clinics: {
-        Row: {
-          address: string | null
-          created_at: string
-          email: string | null
-          id: string
-          name: string
-          phone: string | null
-          updated_at: string
-        }
-        Insert: {
-          address?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name: string
-          phone?: string | null
-          updated_at?: string
-        }
-        Update: {
-          address?: string | null
-          created_at?: string
-          email?: string | null
-          id?: string
-          name?: string
-          phone?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      consent_logs: {
-        Row: {
-          clinic_id: string
-          consent_type: Database["public"]["Enums"]["consent_type"]
-          created_at: string
-          granted: boolean
-          granted_at: string | null
-          id: string
-          ip_address: string | null
-          lead_id: string
-          revoked_at: string | null
-          user_agent: string | null
-        }
-        Insert: {
-          clinic_id: string
-          consent_type: Database["public"]["Enums"]["consent_type"]
-          created_at?: string
-          granted?: boolean
-          granted_at?: string | null
-          id?: string
-          ip_address?: string | null
-          lead_id: string
-          revoked_at?: string | null
-          user_agent?: string | null
-        }
-        Update: {
-          clinic_id?: string
-          consent_type?: Database["public"]["Enums"]["consent_type"]
-          created_at?: string
-          granted?: boolean
-          granted_at?: string | null
-          id?: string
-          ip_address?: string | null
-          lead_id?: string
-          revoked_at?: string | null
-          user_agent?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "consent_logs_clinic_id_fkey"
-            columns: ["clinic_id"]
-            isOneToOne: false
-            referencedRelation: "clinics"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "consent_logs_lead_id_fkey"
-            columns: ["lead_id"]
-            isOneToOne: false
-            referencedRelation: "leads"
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
       }
       leads: {
         Row: {
-          assigned_to: string | null
-          clinic_id: string
+          consent_given: boolean
+          consent_ip: string | null
+          consent_timestamp: string | null
           created_at: string
-          created_by: string
+          created_by: string | null
           email: string | null
           id: string
+          modified_by: string | null
           name: string
-          notes: string | null
           phone: string
           source: string | null
           status: Database["public"]["Enums"]["lead_status"]
+          tenant_id: string
           updated_at: string
         }
         Insert: {
-          assigned_to?: string | null
-          clinic_id: string
+          consent_given?: boolean
+          consent_ip?: string | null
+          consent_timestamp?: string | null
           created_at?: string
-          created_by: string
+          created_by?: string | null
           email?: string | null
           id?: string
+          modified_by?: string | null
           name: string
-          notes?: string | null
           phone: string
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
+          tenant_id: string
           updated_at?: string
         }
         Update: {
-          assigned_to?: string | null
-          clinic_id?: string
+          consent_given?: boolean
+          consent_ip?: string | null
+          consent_timestamp?: string | null
           created_at?: string
-          created_by?: string
+          created_by?: string | null
           email?: string | null
           id?: string
+          modified_by?: string | null
           name?: string
-          notes?: string | null
           phone?: string
           source?: string | null
           status?: Database["public"]["Enums"]["lead_status"]
+          tenant_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "leads_clinic_id_fkey"
-            columns: ["clinic_id"]
+            foreignKeyName: "leads_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "clinics"
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
       }
       profiles: {
         Row: {
-          clinic_id: string | null
           created_at: string
           full_name: string
-          id: string
-          phone: string | null
-          updated_at: string
+          role: Database["public"]["Enums"]["user_role"]
+          tenant_id: string
+          user_id: string
         }
         Insert: {
-          clinic_id?: string | null
           created_at?: string
           full_name: string
-          id: string
-          phone?: string | null
-          updated_at?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          tenant_id: string
+          user_id: string
         }
         Update: {
-          clinic_id?: string | null
           created_at?: string
           full_name?: string
-          id?: string
-          phone?: string | null
-          updated_at?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          tenant_id?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "profiles_clinic_id_fkey"
-            columns: ["clinic_id"]
+            foreignKeyName: "profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
             isOneToOne: false
-            referencedRelation: "clinics"
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
       }
-      user_roles: {
+      tenants: {
         Row: {
+          api_key: string | null
           created_at: string
+          dpo_email: string | null
+          dpo_name: string | null
+          dpo_phone: string | null
           id: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          name: string
+          stripe_customer_id: string | null
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
         }
         Insert: {
+          api_key?: string | null
           created_at?: string
+          dpo_email?: string | null
+          dpo_name?: string | null
+          dpo_phone?: string | null
           id?: string
-          role: Database["public"]["Enums"]["app_role"]
-          user_id: string
+          name: string
+          stripe_customer_id?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
         }
         Update: {
+          api_key?: string | null
           created_at?: string
+          dpo_email?: string | null
+          dpo_name?: string | null
+          dpo_phone?: string | null
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
-          user_id?: string
+          name?: string
+          stripe_customer_id?: string | null
+          subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -256,26 +187,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_user_clinic_id: {
-        Args: { _user_id: string }
-        Returns: string
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_clinic_owner: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
-      app_role: "super_admin" | "clinic_owner" | "clinic_staff"
-      consent_type: "marketing" | "data_processing" | "communication"
-      lead_status: "new" | "contacted" | "qualified" | "converted" | "lost"
+      lead_status:
+        | "new_inquiry"
+        | "contacted"
+        | "qualified"
+        | "converted"
+        | "lost"
+      subscription_status: "trial" | "active" | "cancelled" | "past_due"
+      user_role: "super_admin" | "clinic_admin" | "clinic_user" | "view_only"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -403,9 +325,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["super_admin", "clinic_owner", "clinic_staff"],
-      consent_type: ["marketing", "data_processing", "communication"],
-      lead_status: ["new", "contacted", "qualified", "converted", "lost"],
+      lead_status: [
+        "new_inquiry",
+        "contacted",
+        "qualified",
+        "converted",
+        "lost",
+      ],
+      subscription_status: ["trial", "active", "cancelled", "past_due"],
+      user_role: ["super_admin", "clinic_admin", "clinic_user", "view_only"],
     },
   },
 } as const
