@@ -115,21 +115,18 @@ export type Database = {
         Row: {
           created_at: string
           full_name: string
-          role: Database["public"]["Enums"]["user_role"]
           tenant_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
           full_name: string
-          role?: Database["public"]["Enums"]["user_role"]
           tenant_id: string
           user_id: string
         }
         Update: {
           created_at?: string
           full_name?: string
-          role?: Database["public"]["Enums"]["user_role"]
           tenant_id?: string
           user_id?: string
         }
@@ -182,12 +179,47 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["user_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["user_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      is_super_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       lead_status:
