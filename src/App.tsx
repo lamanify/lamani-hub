@@ -13,6 +13,7 @@ import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
 import Admin from "./pages/Admin";
+import AdminTenantDetail from "./pages/AdminTenantDetail";
 import AuditLog from "./pages/AuditLog";
 import Privacy from "./pages/Privacy";
 import ResetPassword from "./pages/ResetPassword";
@@ -82,6 +83,11 @@ const App = () => (
             <Route path="/admin" element={
               <SubscriptionGuard requiresSubscription={false} requiresSuperAdmin={true}>
                 <Admin />
+              </SubscriptionGuard>
+            } />
+            <Route path="/admin/tenants/:id" element={
+              <SubscriptionGuard requiresSubscription={false} requiresSuperAdmin={true}>
+                <AdminTenantDetail />
               </SubscriptionGuard>
             } />
             
