@@ -13,6 +13,7 @@ import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
 import Admin from "./pages/Admin";
+import AuditLog from "./pages/AuditLog";
 import Privacy from "./pages/Privacy";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -55,6 +56,13 @@ const App = () => (
             <Route path="/billing" element={
               <SubscriptionGuard requiresSubscription={false}>
                 <Billing />
+              </SubscriptionGuard>
+            } />
+
+            {/* Activity Log - Admin Only */}
+            <Route path="/audit-log" element={
+              <SubscriptionGuard requiresSubscription={true}>
+                <AuditLog />
               </SubscriptionGuard>
             } />
 
