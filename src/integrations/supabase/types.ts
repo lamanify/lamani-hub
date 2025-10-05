@@ -265,6 +265,8 @@ export type Database = {
       tenants: {
         Row: {
           api_key: string | null
+          api_key_hash: string | null
+          api_key_prefix: string | null
           billing_email: string | null
           comp_expires_at: string | null
           comp_reason: string | null
@@ -278,6 +280,8 @@ export type Database = {
           id: string
           is_comped: boolean | null
           name: string
+          old_api_key_expires_at: string | null
+          old_api_key_hash: string | null
           plan_code: string | null
           plan_type: string | null
           seat_limit: number | null
@@ -290,6 +294,8 @@ export type Database = {
         }
         Insert: {
           api_key?: string | null
+          api_key_hash?: string | null
+          api_key_prefix?: string | null
           billing_email?: string | null
           comp_expires_at?: string | null
           comp_reason?: string | null
@@ -303,6 +309,8 @@ export type Database = {
           id?: string
           is_comped?: boolean | null
           name: string
+          old_api_key_expires_at?: string | null
+          old_api_key_hash?: string | null
           plan_code?: string | null
           plan_type?: string | null
           seat_limit?: number | null
@@ -315,6 +323,8 @@ export type Database = {
         }
         Update: {
           api_key?: string | null
+          api_key_hash?: string | null
+          api_key_prefix?: string | null
           billing_email?: string | null
           comp_expires_at?: string | null
           comp_reason?: string | null
@@ -328,6 +338,8 @@ export type Database = {
           id?: string
           is_comped?: boolean | null
           name?: string
+          old_api_key_expires_at?: string | null
+          old_api_key_hash?: string | null
           plan_code?: string | null
           plan_type?: string | null
           seat_limit?: number | null
