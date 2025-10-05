@@ -193,12 +193,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           await fetchProfileAndRole(session.user.id);
+          setLoading(false); // Set loading to false after profile/role fetch
         } else {
           setProfile(null);
           setTenant(null);
           setRole(null);
           setSubscriptionConfig(null);
           setSubscriptionLoading(false);
+          setLoading(false);
         }
       }
     );
