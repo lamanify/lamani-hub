@@ -77,6 +77,20 @@ export default function Privacy() {
             </section>
 
             <section className="space-y-3">
+              <h2 className="text-2xl font-semibold text-foreground">Data Protection Officer</h2>
+              <p className="text-foreground/80 leading-relaxed">
+                Each clinic using LamaniHub is responsible for appointing their own Data Protection Officer (DPO) 
+                as required by the PDPA. Your clinic's DPO contact information can be configured in the Settings page.
+              </p>
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Note:</strong> Clinic administrators can update DPO contact information by navigating to{" "}
+                  <Link to="/settings" className="text-primary hover:underline">Settings → Clinic Information</Link>
+                </p>
+              </div>
+            </section>
+
+            <section className="space-y-3">
               <h2 className="text-2xl font-semibold text-foreground">Contact Us</h2>
               <p className="text-foreground/80 leading-relaxed">
                 If you have any questions about this Privacy Policy or wish to exercise your rights, 
