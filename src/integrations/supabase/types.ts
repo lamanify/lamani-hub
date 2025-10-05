@@ -140,6 +140,30 @@ export type Database = {
           },
         ]
       }
+      subscription_config: {
+        Row: {
+          created_at: string
+          grace_period_days: number
+          id: string
+          plan_type: string
+          trial_duration_days: number
+        }
+        Insert: {
+          created_at?: string
+          grace_period_days?: number
+          id?: string
+          plan_type: string
+          trial_duration_days?: number
+        }
+        Update: {
+          created_at?: string
+          grace_period_days?: number
+          id?: string
+          plan_type?: string
+          trial_duration_days?: number
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           api_key: string | null
@@ -147,8 +171,10 @@ export type Database = {
           dpo_email: string | null
           dpo_name: string | null
           dpo_phone: string | null
+          grace_period_ends_at: string | null
           id: string
           name: string
+          plan_type: string | null
           stripe_customer_id: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status"]
           updated_at: string
@@ -159,8 +185,10 @@ export type Database = {
           dpo_email?: string | null
           dpo_name?: string | null
           dpo_phone?: string | null
+          grace_period_ends_at?: string | null
           id?: string
           name: string
+          plan_type?: string | null
           stripe_customer_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
@@ -171,13 +199,23 @@ export type Database = {
           dpo_email?: string | null
           dpo_name?: string | null
           dpo_phone?: string | null
+          grace_period_ends_at?: string | null
           id?: string
           name?: string
+          plan_type?: string | null
           stripe_customer_id?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_plan_type_fkey"
+            columns: ["plan_type"]
+            isOneToOne: false
+            referencedRelation: "subscription_config"
+            referencedColumns: ["plan_type"]
+          },
+        ]
       }
       user_roles: {
         Row: {
@@ -205,6 +243,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_suspend_expired_grace_periods: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["user_role"]
@@ -228,7 +270,12 @@ export type Database = {
         | "qualified"
         | "converted"
         | "lost"
-      subscription_status: "trial" | "active" | "cancelled" | "past_due"
+      subscription_status:
+        | "trial"
+        | "active"
+        | "cancelled"
+        | "past_due"
+        | "suspended"
       user_role: "super_admin" | "clinic_admin" | "clinic_user" | "view_only"
     }
     CompositeTypes: {
@@ -364,7 +411,13 @@ export const Constants = {
         "converted",
         "lost",
       ],
-      subscription_status: ["trial", "active", "cancelled", "past_due"],
+      subscription_status: [
+        "trial",
+        "active",
+        "cancelled",
+        "past_due",
+        "suspended",
+      ],
       user_role: ["super_admin", "clinic_admin", "clinic_user", "view_only"],
     },
   },

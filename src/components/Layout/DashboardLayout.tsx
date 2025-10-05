@@ -1,30 +1,31 @@
 import { ReactNode, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutDashboard, Users, Settings, CreditCard, LogOut, Menu, X } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+import { LayoutDashboard, Users, Settings, CreditCard, LogOut, Menu, X, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import logo from "@/assets/lamanify-logo.png";
+import { useAuth } from "@/contexts/AuthContext";
+import TrialBanner from "@/components/TrialBanner";
+import SuperAdminBadge from "@/components/SuperAdminBadge";
 
 interface DashboardLayoutProps {
   children: ReactNode;
 }
 
-const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Leads", href: "/leads", icon: Users },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Billing", href: "/billing", icon: CreditCard },
-];
-
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
-  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout, role, tenant } = useAuth();
 
-  const handleLogout = () => {
-    // TODO: Implement logout logic
-    navigate("/login");
-  };
+  const showTrialBanner = tenant?.subscription_status === 'trial' && role !== 'super_admin';
+
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Leads", href: "/leads", icon: Users },
+    { name: "Settings", href: "/settings", icon: Settings },
+    { name: "Billing", href: "/billing", icon: CreditCard },
+    ...(role === 'super_admin' ? [{ name: "Admin", href: "/admin", icon: Shield }] : []),
+  ];
 
   return (
     <div className="min-h-screen flex w-full bg-background">
@@ -85,7 +86,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <Button
             variant="outline"
             className="w-full justify-start gap-3"
-            onClick={handleLogout}
+            onClick={logout}
           >
             <LogOut className="h-5 w-5" />
             <span>Logout</span>
@@ -105,10 +106,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             <Menu className="h-5 w-5" />
           </Button>
-          <div className="flex-1">
+          <div className="flex-1 flex items-center gap-3">
+            <SuperAdminBadge />
             <p className="text-sm text-muted-foreground">Welcome back</p>
           </div>
         </header>
+
+        {/* Trial Banner */}
+        {showTrialBanner && <TrialBanner />}
 
         {/* Page Content */}
         <main className="flex-1 p-6 lg:p-8 overflow-auto">

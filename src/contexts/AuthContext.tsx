@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { differenceInDays } from 'date-fns';
 
 interface Profile {
   user_id: string;
@@ -9,15 +10,37 @@ interface Profile {
   full_name: string;
 }
 
+interface Tenant {
+  id: string;
+  name: string;
+  subscription_status: 'trial' | 'active' | 'past_due' | 'suspended' | 'cancelled';
+  plan_type: string;
+  created_at: string;
+  grace_period_ends_at: string | null;
+}
+
+interface SubscriptionConfig {
+  plan_type: string;
+  trial_duration_days: number;
+  grace_period_days: number;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  tenant: Tenant | null;
   role: string | null;
   loading: boolean;
+  subscriptionLoading: boolean;
+  subscriptionConfig: SubscriptionConfig | null;
+  isInGracePeriod: boolean;
+  trialDaysRemaining: number;
+  graceDaysRemaining: number;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,9 +49,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [subscriptionConfig, setSubscriptionConfig] = useState<SubscriptionConfig | null>(null);
+  const [lastSubscriptionFetch, setLastSubscriptionFetch] = useState<number>(0);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const fetchTenantSubscription = async (tenantId: string, planType: string) => {
+    try {
+      setSubscriptionLoading(true);
+
+      // Fetch tenant
+      const { data: tenantData, error: tenantError } = await supabase
+        .from('tenants')
+        .select('id, name, subscription_status, plan_type, created_at, grace_period_ends_at')
+        .eq('id', tenantId)
+        .single();
+
+      if (tenantError) throw tenantError;
+
+      // Fetch subscription config
+      const { data: configData, error: configError } = await supabase
+        .from('subscription_config')
+        .select('plan_type, trial_duration_days, grace_period_days')
+        .eq('plan_type', planType)
+        .single();
+
+      if (configError) throw configError;
+
+      setTenant(tenantData);
+      setSubscriptionConfig(configData);
+      setLastSubscriptionFetch(Date.now());
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
 
   const fetchProfileAndRole = async (userId: string) => {
     try {
@@ -52,10 +112,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setProfile(profileData);
       setRole(roleData.role);
+
+      // Fetch tenant and subscription config
+      await fetchTenantSubscription(profileData.tenant_id, 'default');
     } catch (error) {
       console.error('Error fetching profile/role:', error);
+      setSubscriptionLoading(false);
     }
   };
+
+  const refreshSubscription = async () => {
+    if (profile?.tenant_id && tenant?.plan_type) {
+      await fetchTenantSubscription(profile.tenant_id, tenant.plan_type);
+    }
+  };
+
+  // Calculate if in grace period
+  const isInGracePeriod = 
+    tenant?.subscription_status === 'past_due' &&
+    tenant?.grace_period_ends_at &&
+    new Date(tenant.grace_period_ends_at) > new Date();
+
+  // Calculate trial days remaining
+  const trialDaysRemaining = (() => {
+    if (!tenant || tenant.subscription_status !== 'trial' || !subscriptionConfig) return 0;
+    const createdAt = new Date(tenant.created_at);
+    const expiryDate = new Date(createdAt);
+    expiryDate.setDate(expiryDate.getDate() + subscriptionConfig.trial_duration_days);
+    return Math.max(0, differenceInDays(expiryDate, new Date()));
+  })();
+
+  // Calculate grace period days remaining
+  const graceDaysRemaining = (() => {
+    if (!tenant?.grace_period_ends_at || !isInGracePeriod) return 0;
+    return Math.max(0, differenceInDays(new Date(tenant.grace_period_ends_at), new Date()));
+  })();
+
+  // Refresh subscription every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const fiveMinutes = 5 * 60 * 1000;
+      if (Date.now() - lastSubscriptionFetch > fiveMinutes && profile?.tenant_id && tenant?.plan_type) {
+        fetchTenantSubscription(profile.tenant_id, tenant.plan_type);
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, [lastSubscriptionFetch, profile?.tenant_id, tenant?.plan_type]);
+
+  // Refresh subscription on route change
+  useEffect(() => {
+    if (profile?.tenant_id && tenant?.plan_type) {
+      const threeMinutes = 3 * 60 * 1000;
+      if (Date.now() - lastSubscriptionFetch > threeMinutes) {
+        fetchTenantSubscription(profile.tenant_id, tenant.plan_type);
+      }
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     // Check for existing session
@@ -67,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fetchProfileAndRole(session.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
+        setSubscriptionLoading(false);
       }
     });
 
@@ -80,7 +194,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await fetchProfileAndRole(session.user.id);
         } else {
           setProfile(null);
+          setTenant(null);
           setRole(null);
+          setSubscriptionConfig(null);
+          setSubscriptionLoading(false);
         }
       }
     );
@@ -105,7 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setProfile(null);
+    setTenant(null);
     setRole(null);
+    setSubscriptionConfig(null);
     navigate('/login');
   };
 
@@ -123,11 +242,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         profile,
+        tenant,
         role,
         loading,
+        subscriptionLoading,
+        subscriptionConfig,
+        isInGracePeriod,
+        trialDaysRemaining,
+        graceDaysRemaining,
         login,
         logout,
         resetPassword,
+        refreshSubscription,
       }}
     >
       {children}

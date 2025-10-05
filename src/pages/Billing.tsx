@@ -1,12 +1,59 @@
 import { DashboardLayout } from "@/components/Layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CreditCard, CheckCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CreditCard, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Billing() {
+  const { tenant, graceDaysRemaining } = useAuth();
+
+  const getStatusAlert = () => {
+    if (!tenant) return null;
+
+    switch (tenant.subscription_status) {
+      case 'past_due':
+        return (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Payment Failed</AlertTitle>
+            <AlertDescription>
+              Your payment failed. You have <strong>{graceDaysRemaining} days</strong> remaining in your grace period.
+              Please update your payment method to avoid service interruption.
+            </AlertDescription>
+          </Alert>
+        );
+      case 'suspended':
+        return (
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertTitle>Account Suspended</AlertTitle>
+            <AlertDescription>
+              Your account has been suspended due to payment issues. Update your payment method to restore access.
+            </AlertDescription>
+          </Alert>
+        );
+      case 'cancelled':
+        return (
+          <Alert variant="destructive">
+            <XCircle className="h-4 w-4" />
+            <AlertTitle>Subscription Cancelled</AlertTitle>
+            <AlertDescription>
+              Your subscription has been cancelled. Reactivate your subscription to continue using LamaniHub.
+            </AlertDescription>
+          </Alert>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8 max-w-4xl">
+        {/* Status Alert */}
+        {getStatusAlert()}
+
         {/* Page Header */}
         <div>
           <h1 className="text-3xl font-semibold text-foreground">Billing</h1>

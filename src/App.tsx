@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import SubscriptionGuard from "@/components/SubscriptionGuard";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
 import Billing from "./pages/Billing";
+import Admin from "./pages/Admin";
 import Privacy from "./pages/Privacy";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
@@ -33,11 +34,36 @@ const App = () => (
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/leads" element={<ProtectedRoute><Leads /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            <Route path="/billing" element={<ProtectedRoute><Billing /></ProtectedRoute>} />
+            {/* Protected Routes - Require Active Subscription */}
+            <Route path="/dashboard" element={
+              <SubscriptionGuard requiresSubscription={true}>
+                <Dashboard />
+              </SubscriptionGuard>
+            } />
+            <Route path="/leads" element={
+              <SubscriptionGuard requiresSubscription={true}>
+                <Leads />
+              </SubscriptionGuard>
+            } />
+            <Route path="/settings" element={
+              <SubscriptionGuard requiresSubscription={true}>
+                <Settings />
+              </SubscriptionGuard>
+            } />
+            
+            {/* Billing - Protected but no subscription required */}
+            <Route path="/billing" element={
+              <SubscriptionGuard requiresSubscription={false}>
+                <Billing />
+              </SubscriptionGuard>
+            } />
+
+            {/* Admin - Super Admin Only */}
+            <Route path="/admin" element={
+              <SubscriptionGuard requiresSubscription={false} requiresSuperAdmin={true}>
+                <Admin />
+              </SubscriptionGuard>
+            } />
             
             {/* Catch-all Route */}
             <Route path="*" element={<NotFound />} />
