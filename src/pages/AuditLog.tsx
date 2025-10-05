@@ -143,6 +143,7 @@ export default function AuditLog() {
       return auditData?.map(log => ({ ...log, user_name: "System" }));
     },
     enabled: !!profile?.tenant_id,
+    retry: 2,
   });
 
   // Get unique actions for filter

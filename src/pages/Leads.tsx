@@ -287,9 +287,14 @@ export default function Leads() {
       });
     } catch (error) {
       console.error('Export error:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : "Failed to export leads. Please try again.";
+      
       toast({
         title: "Export failed",
-        description: "Failed to export leads. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
