@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   ArrowLeft,
@@ -105,6 +106,23 @@ export default function LeadDetail() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusChanging, setStatusChanging] = useState(false);
+
+  // Fetch custom field definitions
+  const { data: propertyDefinitions = [] } = useQuery({
+    queryKey: ["property-definitions", profile?.tenant_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("property_definitions")
+        .select("*")
+        .eq("entity", "lead")
+        .eq("show_in_form", true)
+        .order("sort_order", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.tenant_id,
+  });
 
   // Fetch lead details
   const { data: lead, isLoading } = useQuery({
@@ -464,6 +482,13 @@ export default function LeadDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Custom Fields Section */}
+        <CustomFieldsSection
+          leadId={id!}
+          customFields={lead.custom}
+          propertyDefinitions={propertyDefinitions}
+        />
 
         {/* PDPA Consent Information */}
         <Card>
