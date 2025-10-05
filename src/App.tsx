@@ -18,6 +18,7 @@ import Privacy from "./pages/Privacy";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LeadDetail from "./pages/LeadDetail";
+import FieldsManager from "./pages/FieldsManager";
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,11 @@ const App = () => (
             <Route path="/settings" element={
               <SubscriptionGuard requiresSubscription={true}>
                 <Settings />
+              </SubscriptionGuard>
+            } />
+            <Route path="/settings/fields" element={
+              <SubscriptionGuard requiresSubscription={true}>
+                <FieldsManager />
               </SubscriptionGuard>
             } />
             

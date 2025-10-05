@@ -3,6 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
+import { Database, ChevronRight } from "lucide-react";
 
 export default function Settings() {
   return (
@@ -15,6 +17,28 @@ export default function Settings() {
             Manage your clinic information and preferences
           </p>
         </div>
+
+        {/* Custom Fields Manager Link */}
+        <Card className="hover:border-primary transition-colors cursor-pointer">
+          <Link to="/settings/fields">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Database className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Custom Fields</CardTitle>
+                    <CardDescription>
+                      Manage fields that appear on your leads
+                    </CardDescription>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardHeader>
+          </Link>
+        </Card>
 
         {/* Clinic Information */}
         <Card>
