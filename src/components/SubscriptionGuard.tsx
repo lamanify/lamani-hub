@@ -1,7 +1,13 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
+
+type ToastMessage = {
+  title: string;
+  description: string;
+  variant?: 'default' | 'destructive';
+} | null;
 
 interface SubscriptionGuardProps {
   children: ReactNode;
@@ -16,6 +22,26 @@ export default function SubscriptionGuard({
 }: SubscriptionGuardProps) {
   const { user, tenant, role, loading, subscriptionLoading, isInGracePeriod } = useAuth();
   const location = useLocation();
+  const [toastMessage, setToastMessage] = useState<ToastMessage>(null);
+  const hasShownToast = useRef(false);
+
+  // Handle toast notifications after render
+  useEffect(() => {
+    if (toastMessage && !hasShownToast.current) {
+      toast({
+        title: toastMessage.title,
+        description: toastMessage.description,
+        variant: toastMessage.variant || 'destructive'
+      });
+      hasShownToast.current = true;
+    }
+  }, [toastMessage]);
+
+  // Reset toast flag when location changes
+  useEffect(() => {
+    hasShownToast.current = false;
+    setToastMessage(null);
+  }, [location.pathname]);
 
   // Show loading spinner while checking auth and subscription
   if (loading || subscriptionLoading) {
@@ -33,11 +59,13 @@ export default function SubscriptionGuard({
 
   // Check super admin requirement
   if (requiresSuperAdmin && role !== 'super_admin') {
-    toast({
-      title: "Access Denied",
-      description: "This page is only accessible to super administrators.",
-      variant: "destructive"
-    });
+    if (!toastMessage) {
+      setToastMessage({
+        title: "Access Denied",
+        description: "This page is only accessible to super administrators.",
+        variant: "destructive"
+      });
+    }
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -55,11 +83,13 @@ export default function SubscriptionGuard({
   const status = tenant?.subscription_status;
 
   if (!status || !tenant) {
-    toast({
-      title: "Subscription Required",
-      description: "Please activate your subscription to continue.",
-      variant: "destructive"
-    });
+    if (!toastMessage) {
+      setToastMessage({
+        title: "Subscription Required",
+        description: "Please activate your subscription to continue.",
+        variant: "destructive"
+      });
+    }
     return <Navigate to="/billing" replace />;
   }
 
@@ -75,46 +105,56 @@ export default function SubscriptionGuard({
 
   // Redirect to billing for other statuses
   if (status === 'past_due' && !isInGracePeriod) {
-    toast({
-      title: "Grace Period Expired",
-      description: "Your grace period has ended. Please update your payment method.",
-      variant: "destructive"
-    });
+    if (!toastMessage) {
+      setToastMessage({
+        title: "Grace Period Expired",
+        description: "Your grace period has ended. Please update your payment method.",
+        variant: "destructive"
+      });
+    }
     return <Navigate to="/billing" replace />;
   }
 
   if (status === 'suspended') {
-    toast({
-      title: "Account Suspended",
-      description: "Your account has been suspended. Please contact support or update payment.",
-      variant: "destructive"
-    });
+    if (!toastMessage) {
+      setToastMessage({
+        title: "Account Suspended",
+        description: "Your account has been suspended. Please contact support or update payment.",
+        variant: "destructive"
+      });
+    }
     return <Navigate to="/billing" replace />;
   }
 
   if (status === 'cancelled' || status === 'canceled') {
-    toast({
-      title: "Subscription Ended",
-      description: "Your subscription has ended. Reactivate to continue using LamaniHub.",
-      variant: "destructive"
-    });
+    if (!toastMessage) {
+      setToastMessage({
+        title: "Subscription Ended",
+        description: "Your subscription has ended. Reactivate to continue using LamaniHub.",
+        variant: "destructive"
+      });
+    }
     return <Navigate to="/billing" replace />;
   }
 
   if (status === 'inactive') {
-    toast({
-      title: "Subscription Required",
-      description: "Please activate your subscription to access LamaniHub.",
-      variant: "destructive"
-    });
+    if (!toastMessage) {
+      setToastMessage({
+        title: "Subscription Required",
+        description: "Please activate your subscription to access LamaniHub.",
+        variant: "destructive"
+      });
+    }
     return <Navigate to="/billing" replace />;
   }
 
   // Default: redirect to billing
-  toast({
-    title: "Subscription Required",
-    description: "Please activate your subscription to continue.",
-    variant: "destructive"
-  });
+  if (!toastMessage) {
+    setToastMessage({
+      title: "Subscription Required",
+      description: "Please activate your subscription to continue.",
+      variant: "destructive"
+    });
+  }
   return <Navigate to="/billing" replace />;
 }
