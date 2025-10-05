@@ -441,6 +441,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_old_audit_logs: {
+        Args: { retention_days?: number }
+        Returns: number
+      }
+      cleanup_old_webhook_events: {
+        Args: { retention_days?: number }
+        Returns: number
+      }
       get_tenant_safe: {
         Args: { p_user_id: string }
         Returns: {
