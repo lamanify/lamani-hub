@@ -64,6 +64,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhone } from "@/lib/formatPhone";
+import { formatPhoneForWhatsApp } from "@/lib/utils/phoneNormalizer";
 import { formatDistanceToNow } from "date-fns";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -232,7 +233,7 @@ export default function Leads() {
   };
 
   const openWhatsApp = (phone: string) => {
-    const cleanPhone = phone.replace(/\D/g, "");
+    const cleanPhone = formatPhoneForWhatsApp(phone);
     window.open(`https://wa.me/${cleanPhone}`, "_blank");
   };
 

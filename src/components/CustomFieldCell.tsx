@@ -1,5 +1,6 @@
 import { Check, X, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
+import { formatPhoneDisplay, formatPhoneForWhatsApp } from "@/lib/utils/phoneNormalizer";
 
 interface CustomFieldCellProps {
   value: any;
@@ -41,16 +42,17 @@ export function CustomFieldCell({ value, dataType }: CustomFieldCellProps) {
       );
 
     case "phone":
-      const cleanPhone = String(value).replace(/\D/g, "");
+      const formattedPhone = formatPhoneDisplay(value);
+      const whatsappPhone = formatPhoneForWhatsApp(value);
       return (
         <a
-          href={`https://wa.me/${cleanPhone}`}
+          href={`https://wa.me/${whatsappPhone}`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-sm text-green-600 hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
-          {value}
+          {formattedPhone}
         </a>
       );
 
