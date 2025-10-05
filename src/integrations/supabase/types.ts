@@ -59,6 +59,7 @@ export type Database = {
           consent_timestamp: string | null
           created_at: string
           created_by: string | null
+          custom: Json | null
           email: string | null
           id: string
           modified_by: string | null
@@ -75,6 +76,7 @@ export type Database = {
           consent_timestamp?: string | null
           created_at?: string
           created_by?: string | null
+          custom?: Json | null
           email?: string | null
           id?: string
           modified_by?: string | null
@@ -91,6 +93,7 @@ export type Database = {
           consent_timestamp?: string | null
           created_at?: string
           created_by?: string | null
+          custom?: Json | null
           email?: string | null
           id?: string
           modified_by?: string | null
@@ -133,6 +136,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "profiles_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_definitions: {
+        Row: {
+          created_at: string | null
+          data_type: string
+          description: string | null
+          entity: string
+          id: string
+          is_required: boolean | null
+          is_sensitive: boolean | null
+          is_system: boolean
+          key: string
+          label: string
+          last_seen_at: string | null
+          options: Json | null
+          show_in_form: boolean | null
+          show_in_list: boolean | null
+          sort_order: number | null
+          tenant_id: string
+          updated_at: string | null
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          data_type?: string
+          description?: string | null
+          entity?: string
+          id?: string
+          is_required?: boolean | null
+          is_sensitive?: boolean | null
+          is_system?: boolean
+          key: string
+          label: string
+          last_seen_at?: string | null
+          options?: Json | null
+          show_in_form?: boolean | null
+          show_in_list?: boolean | null
+          sort_order?: number | null
+          tenant_id: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          data_type?: string
+          description?: string | null
+          entity?: string
+          id?: string
+          is_required?: boolean | null
+          is_sensitive?: boolean | null
+          is_system?: boolean
+          key?: string
+          label?: string
+          last_seen_at?: string | null
+          options?: Json | null
+          show_in_form?: boolean | null
+          show_in_list?: boolean | null
+          sort_order?: number | null
+          tenant_id?: string
+          updated_at?: string | null
+          usage_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_definitions_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -237,6 +311,57 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          ip_address: unknown | null
+          lead_id: string | null
+          payload_raw: Json
+          source: string
+          status: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown | null
+          lead_id?: string | null
+          payload_raw: Json
+          source: string
+          status: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown | null
+          lead_id?: string | null
+          payload_raw?: Json
+          source?: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_events_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
