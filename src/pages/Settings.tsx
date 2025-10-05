@@ -40,6 +40,9 @@ import { formatDistanceToNow } from "date-fns";
 import { PhoneInput } from "@/components/PhoneInput";
 import { Link } from "react-router-dom";
 import { normalizePhone, isValidMalaysianPhone } from "@/lib/utils/phoneNormalizer";
+import { PasswordChangeForm } from "@/components/PasswordChangeForm";
+import { ActiveSessionsManager } from "@/components/ActiveSessionsManager";
+import { SecurityLogViewer } from "@/components/SecurityLogViewer";
 
 // Form schemas
 const profileSchema = z.object({
@@ -293,10 +296,11 @@ export default function Settings() {
 
         {/* Tabs */}
         <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="profile">Clinic Profile</TabsTrigger>
             <TabsTrigger value="pdpa">PDPA Compliance</TabsTrigger>
             <TabsTrigger value="api">API Access</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Clinic Profile */}
@@ -714,6 +718,27 @@ export default function Settings() {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Tab 4: Security */}
+          <TabsContent value="security" className="space-y-6">
+            <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription>
+                <strong className="text-yellow-900 dark:text-yellow-100">
+                  Protect Your Account
+                </strong>
+                <p className="mt-1 text-yellow-800 dark:text-yellow-200">
+                  Regularly review your account security settings and active sessions to ensure your data remains secure.
+                </p>
+              </AlertDescription>
+            </Alert>
+
+            <PasswordChangeForm />
+            
+            <ActiveSessionsManager />
+            
+            <SecurityLogViewer />
           </TabsContent>
         </Tabs>
       </div>
