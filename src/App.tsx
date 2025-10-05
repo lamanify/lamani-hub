@@ -17,6 +17,7 @@ import AuditLog from "./pages/AuditLog";
 import Privacy from "./pages/Privacy";
 import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
+import LeadDetail from "./pages/LeadDetail";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,11 @@ const App = () => (
             <Route path="/leads" element={
               <SubscriptionGuard requiresSubscription={true}>
                 <Leads />
+              </SubscriptionGuard>
+            } />
+            <Route path="/leads/:id" element={
+              <SubscriptionGuard requiresSubscription={true}>
+                <LeadDetail />
               </SubscriptionGuard>
             } />
             <Route path="/settings" element={
