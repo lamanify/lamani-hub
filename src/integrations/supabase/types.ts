@@ -412,6 +412,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_property_usage: {
+        Args: { p_entity: string; p_key: string; p_tenant_id: string }
+        Returns: undefined
+      }
       is_admin: {
         Args: { _user_id: string }
         Returns: boolean

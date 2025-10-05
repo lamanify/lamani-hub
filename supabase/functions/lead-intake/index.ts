@@ -12,6 +12,16 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 );
 
+// Reserved keys that cannot be used as custom properties
+const RESERVED_KEYS = [
+  'id', 'tenant_id', 'created_at', 'updated_at', 'deleted_at',
+  'name', 'phone', 'email', 'status', 'source', 'custom',
+  'consent', 'consent_given', 'consent_timestamp', 'consent_ip',
+  'created_by', 'modified_by',
+  'password', 'nric', 'ic', 'passport', 'diagnosis',
+  'select', 'insert', 'update', 'delete', 'drop', 'table', 'where'
+];
+
 // Phone normalization utilities
 function normalizePhone(phone: string): string {
   // Remove all non-digit characters
@@ -36,6 +46,130 @@ function isValidMalaysianPhone(phone: string): boolean {
   // Should be in format +60XXXXXXXXX (11-12 digits total)
   const regex = /^\+60\d{9,10}$/;
   return regex.test(phone);
+}
+
+// Type inference for dynamic properties
+function inferType(key: string, value: unknown): string {
+  const k = key.toLowerCase();
+  const v = String(value).trim();
+  
+  // Type by key patterns
+  if (k.includes('email')) return 'email';
+  if (k.includes('phone') || k.includes('mobile') || k.includes('whatsapp')) return 'phone';
+  if (k.includes('date') || k.includes('dob') || k.includes('birthday')) return 'date';
+  if (k.includes('url') || k.includes('website') || k.includes('link')) return 'url';
+  if (k.includes('price') || k.includes('cost') || k.includes('amount') || k.includes('budget')) return 'number';
+  
+  // Type by value patterns
+  if (typeof value === 'boolean') return 'boolean';
+  if (typeof value === 'number') return 'number';
+  
+  if (typeof value === 'string') {
+    // Date format (ISO or common formats)
+    if (/^\d{4}-\d{2}-\d{2}/.test(v)) return 'date';
+    // Email format
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'email';
+    // Malaysian phone format
+    if (/^(\+?60|0)1[0-9]{8,9}$/.test(v.replace(/[\s\-()]/g, ''))) return 'phone';
+    // URL format
+    if (/^https?:\/\/.+/.test(v)) return 'url';
+    // Number format
+    if (/^-?\d+(\.\d+)?$/.test(v)) return 'number';
+    // Boolean format
+    if (['true', 'false', 'yes', 'no', '1', '0'].includes(v.toLowerCase())) return 'boolean';
+  }
+  
+  return 'string';
+}
+
+// Key sanitization to prevent SQL injection and normalize keys
+function sanitizeKey(k: string): string | null {
+  const normalized = k
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_') // Replace non-alphanumeric with underscore
+    .replace(/_+/g, '_')          // Collapse multiple underscores
+    .replace(/^_|_$/g, '')        // Remove leading/trailing underscores
+    .slice(0, 63);                // PostgreSQL identifier length limit
+  
+  // Reject empty or reserved keys
+  if (!normalized || RESERVED_KEYS.includes(normalized)) {
+    return null;
+  }
+  
+  return normalized;
+}
+
+// Upsert custom property definitions
+async function upsertProperties(
+  supabase: any,
+  tenant_id: string,
+  entity: string,
+  extras: Record<string, unknown>
+): Promise<void> {
+  const properties = [];
+  
+  for (const [rawKey, value] of Object.entries(extras)) {
+    const key = sanitizeKey(rawKey);
+    if (!key) {
+      console.log(`Skipping invalid/reserved key: ${rawKey}`);
+      continue;
+    }
+    
+    const dataType = inferType(rawKey, value);
+    
+    properties.push({
+      tenant_id,
+      entity,
+      key,
+      label: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Title case
+      data_type: dataType,
+      is_system: false,
+      show_in_list: true,
+      show_in_form: true,
+      sort_order: 0,
+    });
+  }
+  
+  if (properties.length === 0) {
+    return;
+  }
+  
+  console.log(`Upserting ${properties.length} custom properties`);
+  
+  // Upsert properties (ignore duplicates)
+  const { error } = await supabase
+    .from('property_definitions')
+    .upsert(properties, {
+      onConflict: 'tenant_id,entity,key',
+      ignoreDuplicates: true
+    });
+  
+  if (error) {
+    console.error('Failed to upsert properties:', error);
+    throw error;
+  }
+  
+  // Update usage counts and last_seen_at for existing properties
+  for (const prop of properties) {
+    await supabase.rpc('increment_property_usage', {
+      p_tenant_id: tenant_id,
+      p_entity: entity,
+      p_key: prop.key
+    }).catch(() => {
+      // If RPC doesn't exist, update manually
+      supabase
+        .from('property_definitions')
+        .update({
+          usage_count: supabase.raw('usage_count + 1'),
+          last_seen_at: new Date().toISOString()
+        })
+        .eq('tenant_id', tenant_id)
+        .eq('entity', entity)
+        .eq('key', prop.key)
+        .then(() => {});
+    });
+  }
 }
 
 serve(async (req) => {
@@ -114,9 +248,55 @@ serve(async (req) => {
       );
     }
 
-    // 5. Validate required fields
-    const { name, phone, email, consent, source } = body;
+    // 5. Extract required fields and custom fields
+    const { name, phone, email, consent, source, ...extras } = body;
 
+    // Check payload size for custom fields (max 64KB)
+    const extrasSize = JSON.stringify(extras).length;
+    if (extrasSize > 64 * 1024) {
+      console.error(`Payload too large: ${extrasSize} bytes`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Payload too large. Max 64KB of custom fields.',
+          size: extrasSize,
+          limit: 64 * 1024
+        }),
+        { 
+          status: 413, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    // Check property limit (max 100 custom fields per tenant)
+    if (Object.keys(extras).length > 0) {
+      const { count: propCount } = await supabase
+        .from('property_definitions')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenant.id)
+        .eq('entity', 'lead');
+
+      const currentCount = propCount ?? 0;
+      const newPropsCount = Object.keys(extras).length;
+      
+      if (currentCount + newPropsCount > 100) {
+        console.error(`Property limit exceeded: ${currentCount} + ${newPropsCount} > 100`);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Property limit exceeded. Max 100 custom fields per tenant.',
+            current_properties: currentCount,
+            new_properties: newPropsCount,
+            limit: 100
+          }),
+          { 
+            status: 422, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
+
+    // Validate required fields
     if (!name || !phone || !email) {
       console.error('Missing required fields:', { name: !!name, phone: !!phone, email: !!email });
       return new Response(
@@ -223,7 +403,37 @@ serve(async (req) => {
 
     console.log(`Creating lead for tenant ${tenant.id}`);
 
-    // 10. Insert lead
+    // 10. Upsert custom properties first
+    if (Object.keys(extras).length > 0) {
+      try {
+        await upsertProperties(supabase, tenant.id, 'lead', extras);
+      } catch (error) {
+        console.error('Failed to upsert properties:', error);
+        return new Response(
+          JSON.stringify({ 
+            error: 'Failed to process custom fields',
+            details: error instanceof Error ? error.message : 'Unknown error'
+          }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+    }
+
+    // 11. Sanitize and prepare custom fields
+    const custom: Record<string, unknown> = {};
+    for (const [rawKey, value] of Object.entries(extras)) {
+      const key = sanitizeKey(rawKey);
+      if (key) {
+        custom[key] = value;
+      }
+    }
+
+    console.log(`Custom fields prepared: ${Object.keys(custom).length} fields`);
+
+    // 12. Insert lead with custom fields
     const { data: lead, error: insertError } = await supabase
       .from('leads')
       .insert({
@@ -236,6 +446,7 @@ serve(async (req) => {
         consent_given: consent === true || consent === 'true',
         consent_timestamp: (consent === true || consent === 'true') ? new Date().toISOString() : null,
         consent_ip: (consent === true || consent === 'true') ? clientIp : null,
+        custom: custom, // JSONB field with custom properties
         created_by: null, // API-created leads have no user
       })
       .select()
@@ -257,7 +468,17 @@ serve(async (req) => {
 
     console.log(`Lead created successfully: ${lead.id}`);
 
-    // 11. Log audit entry
+    // 13. Log webhook event for audit trail
+    await supabase.from('webhook_events').insert({
+      tenant_id: tenant.id,
+      source: source || 'api',
+      payload_raw: body,
+      lead_id: lead.id,
+      status: 'success',
+      ip_address: clientIp,
+    });
+
+    // 14. Log audit entry
     await supabase.from('audit_log').insert({
       tenant_id: tenant.id,
       user_id: null, // System/API action
@@ -268,10 +489,11 @@ serve(async (req) => {
         method: 'POST /api/lead-intake',
         ip: clientIp,
         api_key_used: true,
+        custom_fields_count: Object.keys(custom).length,
       },
     });
 
-    // 12. Return success response
+    // 15. Return success response
     return new Response(
       JSON.stringify({
         success: true,
@@ -283,7 +505,9 @@ serve(async (req) => {
           email: lead.email,
           status: lead.status,
           source: lead.source,
-        }
+          custom_fields: Object.keys(custom),
+        },
+        custom_properties_created: Object.keys(custom).length,
       }),
       { 
         status: 201, 

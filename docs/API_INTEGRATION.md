@@ -2,7 +2,15 @@
 
 ## Lead Intake API
 
-The Lead Intake API allows external systems (WordPress forms, n8n workflows, Zapier, etc.) to create leads programmatically in LamaniHub.
+The Lead Intake API allows external systems (WordPress forms, n8n workflows, Zapier, etc.) to create leads programmatically in LamaniHub with **automatic custom field detection**.
+
+### Key Features
+
+✅ **Dynamic Custom Fields** - Send any additional fields beyond the core fields (name, phone, email) and they'll automatically become custom properties  
+✅ **Smart Type Inference** - Automatically detects field types (email, phone, date, url, number, boolean, string)  
+✅ **Duplicate Prevention** - Checks for existing leads by phone or email  
+✅ **PDPA Compliance** - Tracks consent with IP and timestamp  
+✅ **Webhook Audit Trail** - All API requests logged for compliance  
 
 ### Endpoint
 
@@ -40,18 +48,38 @@ x-api-key: your_api_key_here
   "phone": "012-345 6789",
   "email": "ahmad@example.com",
   "consent": true,
-  "source": "website_form"
+  "source": "website_form",
+  "treatment_interest": "Botox",
+  "budget": "5000",
+  "preferred_date": "2025-12-15",
+  "referral_source": "Facebook"
 }
 ```
 
-**Required Fields:**
-- `name` (string, 2-100 characters)
-- `phone` (string, Malaysian phone format)
-- `email` (string, valid email address)
+**Core Fields (Required):**
+- `name` (string, 2-100 characters) - Patient/lead name
+- `phone` (string, Malaysian format) - Contact phone number
+- `email` (string, valid email) - Contact email address
 
-**Optional Fields:**
+**Core Fields (Optional):**
 - `consent` (boolean, default: false) - PDPA consent status
-- `source` (string, default: 'api') - Lead source identifier
+- `source` (string, default: 'api') - Lead source identifier (e.g., 'website_form', 'facebook', 'google_ads')
+
+**Custom Fields (Optional):**
+Any additional fields beyond the core fields will automatically become custom properties. Examples:
+- `treatment_interest` → String field
+- `budget` → Number field (auto-detected from numeric value)
+- `preferred_date` → Date field (auto-detected from date format)
+- `referral_source` → String field
+- `is_returning_patient` → Boolean field
+
+**Custom Fields Features:**
+- ✅ Automatically created on first use
+- ✅ Smart type inference (7 types: string, number, boolean, date, email, phone, url)
+- ✅ Visible in LamaniHub Fields Manager (`/settings/fields`)
+- ✅ Searchable and filterable in lead list
+- ✅ Max 100 custom fields per tenant
+- ✅ Max 64KB payload size for custom fields
 
 ### Phone Number Format
 
@@ -76,8 +104,10 @@ All numbers are automatically normalized to E.164 format: `+60XXXXXXXXX`
     "phone": "+60123456789",
     "email": "ahmad@example.com",
     "status": "new_inquiry",
-    "source": "website_form"
-  }
+    "source": "website_form",
+    "custom_fields": ["treatment_interest", "budget", "preferred_date", "referral_source"]
+  },
+  "custom_properties_created": 4
 }
 ```
 
@@ -143,6 +173,25 @@ All numbers are automatically normalized to E.164 format: `+60XXXXXXXXX`
 }
 ```
 
+**413 Payload Too Large:**
+```json
+{
+  "error": "Payload too large. Max 64KB of custom fields.",
+  "size": 70000,
+  "limit": 65536
+}
+```
+
+**422 Unprocessable Entity - Property Limit:**
+```json
+{
+  "error": "Property limit exceeded. Max 100 custom fields per tenant.",
+  "current_properties": 95,
+  "new_properties": 10,
+  "limit": 100
+}
+```
+
 **500 Internal Server Error:**
 ```json
 {
@@ -166,7 +215,10 @@ curl -X POST https://your-app.lovable.app/api/lead-intake \
     "phone": "0123456789",
     "email": "test@example.com",
     "consent": true,
-    "source": "website_form"
+    "source": "website_form",
+    "treatment_interest": "Laser Treatment",
+    "budget": "8000",
+    "preferred_date": "2025-12-20"
   }'
 ```
 
@@ -185,7 +237,12 @@ const createLead = async (leadData) => {
       phone: leadData.phone,
       email: leadData.email,
       consent: leadData.consent,
-      source: 'website'
+      source: 'website',
+      // Custom fields - automatically detected and created
+      treatment_interest: leadData.treatment,
+      budget: leadData.budget,
+      preferred_location: leadData.location,
+      notes: leadData.notes
     })
   });
 
@@ -193,6 +250,7 @@ const createLead = async (leadData) => {
   
   if (response.ok) {
     console.log('Lead created:', result.lead_id);
+    console.log('Custom fields created:', result.custom_properties_created);
   } else {
     console.error('Error:', result.error);
   }
@@ -364,6 +422,210 @@ create_lead(api_key, lead)
 
 ---
 
+## Custom Fields (HubSpot-Style Auto-Creation)
+
+### Overview
+
+LamaniHub automatically creates custom properties when you send fields beyond the core required fields. This allows you to capture any additional information without pre-configuring fields in the UI.
+
+### How It Works
+
+1. **Send Any Field:** Include any additional fields in your API request
+2. **Automatic Detection:** The system detects unknown fields
+3. **Type Inference:** Smart detection of field type based on name and value
+4. **Property Creation:** Field definition created in `property_definitions` table
+5. **Data Storage:** Values stored in `leads.custom` JSONB field
+6. **UI Visibility:** Fields appear in Fields Manager and lead detail views
+
+### Example
+
+**API Request:**
+```json
+{
+  "name": "Sarah Chen",
+  "phone": "0123456789",
+  "email": "sarah@example.com",
+  "consent": true,
+  "treatment_interest": "Botox",
+  "budget": "5000",
+  "preferred_date": "2025-12-20",
+  "is_first_time": true,
+  "referral_source": "Facebook Ad"
+}
+```
+
+**What Happens:**
+1. Core fields (`name`, `phone`, `email`, `consent`) → Stored in standard columns
+2. Custom fields automatically created:
+   - `treatment_interest` → String property
+   - `budget` → Number property (inferred from numeric value)
+   - `preferred_date` → Date property (inferred from date format)
+   - `is_first_time` → Boolean property
+   - `referral_source` → String property
+
+**Result in LamaniHub:**
+- Lead created with ID
+- 5 custom properties automatically created
+- Properties visible in Fields Manager (`/settings/fields`)
+- Values searchable and filterable in lead list
+- Fields reusable for future leads
+
+### Type Inference
+
+The system intelligently detects field types using these rules:
+
+**1. By Field Name Pattern:**
+| Pattern | Type | Example |
+|---------|------|---------|
+| Contains "email" | email | `contact_email` |
+| Contains "phone", "mobile", "whatsapp" | phone | `mobile_number` |
+| Contains "date", "dob", "birthday" | date | `appointment_date` |
+| Contains "url", "website", "link" | url | `social_media_url` |
+| Contains "price", "cost", "amount", "budget" | number | `treatment_budget` |
+
+**2. By Value Pattern:**
+| Value | Type | Example |
+|-------|------|---------|
+| `true` / `false` | boolean | `is_returning` |
+| `"2025-12-15"` | date | `preferred_date` |
+| `"user@example.com"` | email | `secondary_email` |
+| `"0123456789"` | phone | `alternative_phone` |
+| `"https://..."` | url | `facebook_profile` |
+| `"5000"` or `5000` | number | `budget` |
+| Everything else | string | `notes` |
+
+### Key Sanitization
+
+Field names are automatically sanitized for database safety:
+
+**Original → Sanitized:**
+- `Treatment Interest` → `treatment_interest`
+- `Patient Age (Years)` → `patient_age_years`
+- `Email@Address` → `email_address`
+- `Phone#1` → `phone_1`
+
+**Rules:**
+- Lowercase conversion
+- Special characters → underscore
+- Multiple underscores collapsed
+- Max 63 characters (PostgreSQL limit)
+- Reserved keywords blocked
+
+### Limits & Guardrails
+
+**Property Limit:**
+- Max 100 custom fields per tenant
+- Prevents database bloat
+- Error: `422 Unprocessable Entity`
+
+**Payload Size:**
+- Max 64KB for all custom fields
+- Prevents large payloads
+- Error: `413 Payload Too Large`
+
+**Reserved Fields:**
+- Core fields cannot be overridden
+- SQL keywords blocked
+- Sensitive field names blocked
+- Returns `null` for invalid keys (skipped)
+
+### Managing Custom Fields
+
+**View Fields:**
+1. Log in to LamaniHub
+2. Go to Settings → Fields Manager (`/settings/fields`)
+3. See all auto-created properties
+
+**Field Properties:**
+- Label (auto-generated from key)
+- Data type (inferred)
+- Visibility settings
+- Usage count
+- Last seen timestamp
+
+**Edit Fields:**
+- Change label
+- Update data type
+- Toggle visibility (list/form)
+- Mark as sensitive (PDPA)
+- Archive unused fields
+
+### Best Practices
+
+**✅ DO:**
+- Use descriptive field names (`treatment_interest` not `ti`)
+- Use consistent naming across requests
+- Send only relevant data
+- Use appropriate data types in values
+- Test with sample data first
+
+**❌ DON'T:**
+- Send sensitive medical data unless required
+- Use overly long field names
+- Send duplicate fields with different names
+- Exceed 100 custom fields
+- Send binary data or large text blocks
+
+### Use Cases
+
+**1. Treatment Tracking:**
+```json
+{
+  "name": "Patient Name",
+  "email": "patient@example.com",
+  "phone": "0123456789",
+  "treatment_interest": "Laser Hair Removal",
+  "treatment_area": "Full Legs",
+  "budget": "3000",
+  "preferred_start_date": "2025-12-01"
+}
+```
+
+**2. Campaign Tracking:**
+```json
+{
+  "name": "Lead Name",
+  "email": "lead@example.com",
+  "phone": "0123456789",
+  "campaign_source": "Google Ads",
+  "campaign_name": "Summer Promo 2025",
+  "ad_group": "Skincare",
+  "landing_page": "https://clinic.com/summer-promo"
+}
+```
+
+**3. Referral Tracking:**
+```json
+{
+  "name": "Referred Patient",
+  "email": "referred@example.com",
+  "phone": "0123456789",
+  "referred_by": "Dr. Ahmad",
+  "referral_type": "Doctor Referral",
+  "referral_date": "2025-11-15",
+  "referral_notes": "Interested in consultation"
+}
+```
+
+### Technical Details
+
+**Storage:**
+- Custom field definitions: `property_definitions` table
+- Custom field values: `leads.custom` JSONB column
+- Indexed for fast queries (GIN index)
+
+**Performance:**
+- Property upsert uses `ON CONFLICT` for idempotency
+- Usage tracking via RPC function
+- Batch operations supported
+
+**Audit Trail:**
+- All webhook payloads logged in `webhook_events`
+- Property creation tracked in `audit_log`
+- IP addresses recorded for compliance
+
+---
+
 ## Validation Rules
 
 ### Name
@@ -399,6 +661,42 @@ create_lead(api_key, lead)
 - **Type:** String
 - **Default:** `"api"`
 - **Examples:** `"website_form"`, `"n8n_workflow"`, `"zapier"`, `"wordpress"`
+
+### Custom Fields
+- **Required:** No
+- **Type:** Any JSON-serializable value
+- **Automatically created:** Yes
+- **Type inference:** Automatic (string, number, boolean, date, email, phone, url)
+- **Limits:**
+  - Max 100 custom fields per tenant
+  - Max 64KB total size for custom fields
+  - Field names sanitized to snake_case
+  - Reserved field names blocked
+
+**Type Inference Rules:**
+
+1. **By Key Name:**
+   - Contains "email" → `email` type
+   - Contains "phone", "mobile", "whatsapp" → `phone` type
+   - Contains "date", "dob", "birthday" → `date` type
+   - Contains "url", "website", "link" → `url` type
+   - Contains "price", "cost", "amount", "budget" → `number` type
+
+2. **By Value Pattern:**
+   - `true`/`false` → `boolean` type
+   - `"2025-12-15"` → `date` type
+   - `"user@example.com"` → `email` type
+   - `"0123456789"` → `phone` type
+   - `"https://example.com"` → `url` type
+   - `"5000"` → `number` type
+   - Everything else → `string` type
+
+**Reserved Field Names (Cannot be used):**
+- Core fields: `id`, `tenant_id`, `name`, `phone`, `email`, `status`, `source`, `custom`
+- System fields: `created_at`, `updated_at`, `deleted_at`, `created_by`, `modified_by`
+- Consent fields: `consent`, `consent_given`, `consent_timestamp`, `consent_ip`
+- Sensitive fields: `password`, `nric`, `ic`, `passport`, `diagnosis`
+- SQL keywords: `select`, `insert`, `update`, `delete`, `drop`, `table`, `where`
 
 ---
 
@@ -491,6 +789,23 @@ If a duplicate is found, the API returns:
 - Update the existing lead instead
 - Use a different phone or email
 - Check if this is intentional duplicate prevention
+
+### "Property limit exceeded"
+**Cause:** Tenant has reached the maximum of 100 custom fields.
+
+**Solution:**
+- Review existing custom fields in Fields Manager (`/settings/fields`)
+- Archive unused fields
+- Consolidate similar fields
+- Contact support for enterprise limits
+
+### "Payload too large"
+**Cause:** Custom fields data exceeds 64KB limit.
+
+**Solution:**
+- Reduce the amount of custom field data
+- Split data into multiple leads if appropriate
+- Store large content externally and use URLs
 
 ### "Failed to create lead"
 **Cause:** Server error or database issue.
