@@ -2,11 +2,66 @@ import { DashboardLayout } from "@/components/Layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { CreditCard, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { CreditCard, CheckCircle, AlertCircle, XCircle, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 
 export default function Billing() {
   const { tenant, graceDaysRemaining } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle success/cancel callbacks from Stripe
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('success') === 'true') {
+      toast.success('Subscription activated! Welcome to LamaniHub.');
+      navigate('/billing', { replace: true });
+    }
+    if (params.get('canceled') === 'true') {
+      toast.info('Checkout was cancelled. You can try again anytime.');
+      navigate('/billing', { replace: true });
+    }
+  }, [location.search, navigate]);
+
+  const handleStartCheckout = async () => {
+    setLoading(true);
+    try {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        toast.error('Please log in to subscribe');
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (error) {
+        console.error('Checkout error:', error);
+        throw error;
+      }
+
+      if (!data?.url) {
+        throw new Error('No checkout URL returned');
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch (error) {
+      console.error('Failed to start checkout:', error);
+      toast.error('Failed to start checkout. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusAlert = () => {
     if (!tenant) return null;
@@ -86,7 +141,16 @@ export default function Billing() {
               </div>
             </div>
 
-            <Button>Upgrade Plan</Button>
+            <Button onClick={handleStartCheckout} disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Starting checkout...
+                </>
+              ) : (
+                'Subscribe Now - RM 299/month'
+              )}
+            </Button>
           </CardContent>
         </Card>
 

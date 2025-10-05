@@ -250,7 +250,10 @@ export type Database = {
           name: string
           plan_type: string | null
           stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_current_period_end: string | null
           subscription_status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string | null
           updated_at: string
         }
         Insert: {
@@ -264,7 +267,10 @@ export type Database = {
           name: string
           plan_type?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_current_period_end?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -278,7 +284,10 @@ export type Database = {
           name?: string
           plan_type?: string | null
           stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_current_period_end?: string | null
           subscription_status?: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at?: string | null
           updated_at?: string
         }
         Relationships: [
