@@ -1,31 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import ForgotPasswordDialog from "@/components/ForgotPasswordDialog";
+import { Loader2 } from "lucide-react";
 import logo from "@/assets/lamanify-logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { user, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      navigate("/dashboard");
+    }
+  }, [user, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      // TODO: Implement Supabase auth login
-      // For now, simulate login
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+      await login(email, password);
       toast.success("Login successful!");
-      navigate("/dashboard");
-    } catch (error) {
-      toast.error("Login failed. Please check your credentials.");
+    } catch (error: any) {
+      if (error.message?.includes("Invalid login credentials")) {
+        toast.error("Invalid email or password");
+      } else if (error.message?.includes("Email not confirmed")) {
+        toast.error("Please verify your email address");
+      } else if (error.message?.includes("User not found")) {
+        toast.error("No account found with this email");
+      } else {
+        toast.error("Unable to connect, please try again");
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +79,16 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                    type="button"
+                    onClick={() => setForgotPasswordOpen(true)}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <Input
                   id="password"
                   type="password"
@@ -73,8 +99,26 @@ export default function Login() {
                 />
               </div>
 
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                />
+                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                  Remember me
+                </Label>
+              </div>
+
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in..." : "Sign In"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign In"
+                )}
               </Button>
             </form>
 
@@ -86,6 +130,11 @@ export default function Login() {
             </div>
           </CardContent>
         </Card>
+
+        <ForgotPasswordDialog
+          open={forgotPasswordOpen}
+          onOpenChange={setForgotPasswordOpen}
+        />
       </div>
     </div>
   );
