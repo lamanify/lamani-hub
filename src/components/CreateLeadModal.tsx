@@ -180,7 +180,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl sm:max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Lead</DialogTitle>
           <DialogDescription>
@@ -202,6 +202,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
                       placeholder="e.g., Ahmad bin Abdullah"
                       {...field}
                       disabled={createLeadMutation.isPending}
+                      className="min-h-[44px]"
                     />
                   </FormControl>
                   <FormMessage />
@@ -222,6 +223,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
                       placeholder="e.g., 012-345 6789"
                       {...field}
                       disabled={createLeadMutation.isPending}
+                      className="min-h-[44px]"
                       onBlur={(e) => {
                         try {
                           const normalized = normalizePhone(e.target.value);
@@ -254,6 +256,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
                       placeholder="e.g., patient@example.com"
                       {...field}
                       disabled={createLeadMutation.isPending}
+                      className="min-h-[44px]"
                     />
                   </FormControl>
                   <FormMessage />
@@ -274,11 +277,11 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
                     disabled={createLeadMutation.isPending}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="min-h-[44px]">
                         <SelectValue placeholder="Select a source" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="z-50 bg-background">
                       <SelectItem value="manual">Manual</SelectItem>
                       <SelectItem value="walk-in">Walk-in</SelectItem>
                       <SelectItem value="referral">Referral</SelectItem>
@@ -307,6 +310,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
                       maxLength={500}
                       {...field}
                       disabled={createLeadMutation.isPending}
+                      className="min-h-[88px]"
                     />
                   </FormControl>
                   <FormDescription>
@@ -328,6 +332,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
                       checked={field.value}
                       onCheckedChange={field.onChange}
                       disabled={createLeadMutation.isPending}
+                      className="mt-1"
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
@@ -352,19 +357,20 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
             />
 
             {/* Footer Buttons */}
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="flex-col sm:flex-row gap-2">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => handleOpenChange(false)}
                 disabled={createLeadMutation.isPending}
+                className="min-h-[44px] w-full sm:w-auto"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={createLeadMutation.isPending || !form.formState.isValid}
-                className="gap-2"
+                className="gap-2 min-h-[44px] w-full sm:w-auto"
               >
                 {createLeadMutation.isPending ? (
                   <>

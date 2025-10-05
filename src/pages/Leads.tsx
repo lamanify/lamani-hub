@@ -63,6 +63,7 @@ import { CustomFieldCell } from "@/components/CustomFieldCell";
 import { CreateLeadModal } from "@/components/CreateLeadModal";
 import { ImportLeadsModal } from "@/components/ImportLeadsModal";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { LeadCard } from "@/components/LeadCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -340,20 +341,21 @@ export default function Leads() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">Leads</h1>
             <p className="text-muted-foreground mt-1">
               Manage your clinic's patient inquiries
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <ImportLeadsModal />
             <Button
               onClick={handleExport}
               disabled={isExporting || !leads || leads.length === 0}
               variant="outline"
               size="default"
+              className="min-h-[44px] flex-1 sm:flex-initial"
             >
               <Download className="h-4 w-4 mr-2" />
               {isExporting ? 'Exporting...' : 'Export'}
@@ -371,14 +373,14 @@ export default function Leads() {
                 placeholder="Search by name, phone, or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 min-h-[44px]"
               />
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[200px] min-h-[44px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent className="bg-background z-50">
@@ -395,10 +397,10 @@ export default function Leads() {
             </Select>
 
             <Select value={sourceFilter} onValueChange={setSourceFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] min-h-[44px]">
                 <SelectValue placeholder="Source" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="z-50 bg-background">
                 <SelectItem value="all">All Sources</SelectItem>
                 <SelectItem value="manual">Manual</SelectItem>
                 <SelectItem value="import">Import</SelectItem>
@@ -407,16 +409,67 @@ export default function Leads() {
               </SelectContent>
             </Select>
 
-            <ColumnPicker
-              columns={allColumns}
-              selectedColumns={selectedCustomColumns}
-              onColumnsChange={setSelectedCustomColumns}
-            />
+            <div className="hidden sm:block">
+              <ColumnPicker
+                columns={allColumns}
+                selectedColumns={selectedCustomColumns}
+                onColumnsChange={setSelectedCustomColumns}
+              />
+            </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="border rounded-lg bg-white">
+        {/* Mobile Card View (< md) */}
+        <div className="md:hidden space-y-3">
+          {isLoading ? (
+            [...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full" />
+            ))
+          ) : showEmpty ? (
+            <div className="flex flex-col items-center justify-center py-16 px-4 bg-white border rounded-lg">
+              {hasFilters ? (
+                <>
+                  <Search className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No leads found</h3>
+                  <p className="text-muted-foreground text-center mb-6">
+                    Try adjusting your search or filters
+                  </p>
+                  <Button variant="outline" onClick={clearFilters} className="min-h-[44px]">
+                    Clear Filters
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Users className="h-16 w-16 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No leads yet</h3>
+                  <p className="text-muted-foreground text-center mb-6">
+                    Get started by adding your first patient inquiry
+                  </p>
+                  <CreateLeadModal
+                    trigger={
+                      <Button className="gap-2 min-h-[44px]">
+                        <Plus className="h-4 w-4" />
+                        Add Your First Lead
+                      </Button>
+                    }
+                  />
+                </>
+              )}
+            </div>
+          ) : (
+            leads?.map((lead) => (
+              <LeadCard
+                key={lead.id}
+                lead={lead}
+                onView={(id) => navigate(`/leads/${id}`)}
+                onDelete={handleDelete}
+              />
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table View (≥ md) */}
+        <div className="hidden md:block border rounded-lg bg-white">
           {isLoading ? (
             <div className="p-6 space-y-4">
               {[...Array(10)].map((_, i) => (

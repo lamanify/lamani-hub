@@ -70,8 +70,8 @@ export function WhatsAppButton({
           variant={variant === "icon" ? "ghost" : "default"}
           className={cn(
             variant === "icon"
-              ? "h-7 w-7 p-0"
-              : "bg-[#25D366] hover:bg-[#20BA5A] text-white gap-2",
+              ? "h-9 w-9 p-0 touch-manipulation"
+              : "bg-[#25D366] hover:bg-[#20BA5A] text-white gap-2 min-h-[44px] touch-manipulation",
             className
           )}
           asChild
@@ -84,7 +84,7 @@ export function WhatsAppButton({
           >
             <MessageCircle
               className={cn(
-                variant === "icon" ? "h-3.5 w-3.5" : "h-4 w-4",
+                variant === "icon" ? "h-4 w-4" : "h-4 w-4",
                 variant === "icon" ? "text-green-600" : ""
               )}
             />

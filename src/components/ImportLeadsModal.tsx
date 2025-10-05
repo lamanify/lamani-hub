@@ -107,12 +107,13 @@ export function ImportLeadsModal() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">
+        <Button variant="outline" className="min-h-[44px]">
           <Upload className="h-4 w-4 mr-2" />
-          Import
+          <span className="hidden sm:inline">Import</span>
+          <span className="sm:hidden">Import</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl sm:max-w-2xl w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Import Leads from CSV</DialogTitle>
         </DialogHeader>
@@ -127,7 +128,7 @@ export function ImportLeadsModal() {
                 <p className="text-sm"><strong>Example:</strong> Ahmad bin Abdullah, 012-345 6789, ahmad@example.com</p>
                 <Button 
                   variant="link" 
-                  className="p-0 h-auto font-normal text-sm"
+                  className="p-0 h-auto font-normal text-sm touch-manipulation"
                   onClick={handleDownloadTemplate}
                 >
                   <Download className="h-3 w-3 mr-1" />
@@ -144,6 +145,7 @@ export function ImportLeadsModal() {
               accept=".csv,.xlsx,.xls"
               onChange={handleFileChange}
               disabled={importing}
+              className="min-h-[44px] cursor-pointer"
             />
             {file && (
               <p className="text-sm text-muted-foreground mt-2">
@@ -186,13 +188,18 @@ export function ImportLeadsModal() {
           )}
 
           {/* Buttons */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setOpen(false)}>
+          <div className="flex flex-col sm:flex-row justify-end gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setOpen(false)}
+              className="min-h-[44px] w-full sm:w-auto"
+            >
               Close
             </Button>
             <Button
               onClick={handleImport}
               disabled={!file || importing}
+              className="min-h-[44px] w-full sm:w-auto"
             >
               {importing ? 'Importing...' : 'Import Leads'}
             </Button>
