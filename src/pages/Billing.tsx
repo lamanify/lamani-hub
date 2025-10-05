@@ -9,7 +9,8 @@ import {
   XCircle, 
   Clock,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Shield
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,7 @@ export default function Billing() {
   const { 
     tenant, 
     session,
+    role,
     trialDaysRemaining, 
     graceDaysRemaining,
     subscriptionConfig,
@@ -169,6 +171,48 @@ export default function Billing() {
   };
 
   const renderSubscriptionContent = () => {
+    // Super Admin placeholder - no billing applicable
+    if (role === 'super_admin') {
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col items-center text-center space-y-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20">
+              <Shield className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-semibold text-foreground">Super Administrator Account</h3>
+              <p className="text-muted-foreground mt-2">
+                You have full system access as a Super Administrator
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4 py-6">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Plan</span>
+              <span className="font-medium text-foreground">Super Admin</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Access Level</span>
+              <span className="font-medium text-foreground">Full System Access</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Price</span>
+              <span className="font-medium text-foreground">N/A</span>
+            </div>
+          </div>
+
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertTitle>Administrative Access</AlertTitle>
+            <AlertDescription>
+              Super Admins have unrestricted access to all features and tenants. Billing management is not applicable.
+            </AlertDescription>
+          </Alert>
+        </div>
+      );
+    }
+
     if (subscriptionLoading || !tenant) {
       return (
         <div className="flex items-center justify-center py-12">
