@@ -265,14 +265,22 @@ export type Database = {
       tenants: {
         Row: {
           api_key: string | null
+          billing_email: string | null
+          comp_expires_at: string | null
+          comp_reason: string | null
           created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
           dpo_email: string | null
           dpo_name: string | null
           dpo_phone: string | null
           grace_period_ends_at: string | null
           id: string
+          is_comped: boolean | null
           name: string
+          plan_code: string | null
           plan_type: string | null
+          seat_limit: number | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_current_period_end: string | null
@@ -282,14 +290,22 @@ export type Database = {
         }
         Insert: {
           api_key?: string | null
+          billing_email?: string | null
+          comp_expires_at?: string | null
+          comp_reason?: string | null
           created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
           dpo_email?: string | null
           dpo_name?: string | null
           dpo_phone?: string | null
           grace_period_ends_at?: string | null
           id?: string
+          is_comped?: boolean | null
           name: string
+          plan_code?: string | null
           plan_type?: string | null
+          seat_limit?: number | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_current_period_end?: string | null
@@ -299,14 +315,22 @@ export type Database = {
         }
         Update: {
           api_key?: string | null
+          billing_email?: string | null
+          comp_expires_at?: string | null
+          comp_reason?: string | null
           created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
           dpo_email?: string | null
           dpo_name?: string | null
           dpo_phone?: string | null
           grace_period_ends_at?: string | null
           id?: string
+          is_comped?: boolean | null
           name?: string
+          plan_code?: string | null
           plan_type?: string | null
+          seat_limit?: number | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_current_period_end?: string | null
@@ -438,7 +462,18 @@ export type Database = {
         | "cancelled"
         | "past_due"
         | "suspended"
-      user_role: "super_admin" | "clinic_admin" | "clinic_user" | "view_only"
+        | "inactive"
+        | "trialing"
+        | "canceled"
+        | "comped"
+      user_role:
+        | "super_admin"
+        | "clinic_admin"
+        | "clinic_user"
+        | "view_only"
+        | "tenant_owner"
+        | "tenant_admin"
+        | "tenant_member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -579,8 +614,20 @@ export const Constants = {
         "cancelled",
         "past_due",
         "suspended",
+        "inactive",
+        "trialing",
+        "canceled",
+        "comped",
       ],
-      user_role: ["super_admin", "clinic_admin", "clinic_user", "view_only"],
+      user_role: [
+        "super_admin",
+        "clinic_admin",
+        "clinic_user",
+        "view_only",
+        "tenant_owner",
+        "tenant_admin",
+        "tenant_member",
+      ],
     },
   },
 } as const

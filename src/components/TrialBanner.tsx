@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function TrialBanner() {
   const { tenant, subscriptionConfig, trialDaysRemaining } = useAuth();
 
-  if (!tenant || tenant.subscription_status !== 'trial') {
+  if (!tenant || (tenant.subscription_status !== 'trial' && tenant.subscription_status !== 'trialing')) {
     return null;
   }
 

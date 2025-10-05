@@ -13,11 +13,21 @@ interface Profile {
 interface Tenant {
   id: string;
   name: string;
-  subscription_status: 'trial' | 'active' | 'past_due' | 'suspended' | 'cancelled';
+  subscription_status: 'inactive' | 'active' | 'trialing' | 'trial' | 'past_due' | 'suspended' | 'cancelled' | 'canceled' | 'comped';
   plan_type: string;
+  plan_code?: string;
   created_at: string;
   grace_period_ends_at: string | null;
   subscription_current_period_end: string | null;
+  current_period_start?: string | null;
+  current_period_end?: string | null;
+  is_comped?: boolean;
+  comp_reason?: string | null;
+  comp_expires_at?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_subscription_id?: string | null;
+  billing_email?: string | null;
+  seat_limit?: number | null;
 }
 
 interface SubscriptionConfig {

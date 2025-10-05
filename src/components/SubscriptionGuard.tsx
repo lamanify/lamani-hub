@@ -63,8 +63,8 @@ export default function SubscriptionGuard({
     return <Navigate to="/billing" replace />;
   }
 
-  // Allow access for active and trial subscriptions
-  if (status === 'active' || status === 'trial') {
+  // Allow access for active subscriptions (active, trial, trialing, comped)
+  if (status === 'active' || status === 'trial' || status === 'trialing' || status === 'comped') {
     return <>{children}</>;
   }
 
@@ -92,10 +92,19 @@ export default function SubscriptionGuard({
     return <Navigate to="/billing" replace />;
   }
 
-  if (status === 'cancelled') {
+  if (status === 'cancelled' || status === 'canceled') {
     toast({
       title: "Subscription Ended",
       description: "Your subscription has ended. Reactivate to continue using LamaniHub.",
+      variant: "destructive"
+    });
+    return <Navigate to="/billing" replace />;
+  }
+
+  if (status === 'inactive') {
+    toast({
+      title: "Subscription Required",
+      description: "Please activate your subscription to access LamaniHub.",
       variant: "destructive"
     });
     return <Navigate to="/billing" replace />;
