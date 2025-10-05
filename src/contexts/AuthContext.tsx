@@ -93,16 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfileAndRole = async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, tenant_id, full_name')
-        .eq('user_id', userId)
-        .single();
-
-      if (profileError) throw profileError;
-
-      // Fetch role
+      // Fetch role first
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
@@ -111,8 +102,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (roleError) throw roleError;
 
-      setProfile(profileData);
       setRole(roleData.role);
+
+      // Super admins don't need profile or tenant data
+      if (roleData.role === 'super_admin') {
+        setSubscriptionLoading(false);
+        return;
+      }
+
+      // Fetch profile for non-super admins
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, tenant_id, full_name')
+        .eq('user_id', userId)
+        .single();
+
+      if (profileError) throw profileError;
+
+      setProfile(profileData);
 
       // Fetch tenant and subscription config
       await fetchTenantSubscription(profileData.tenant_id, 'default');
