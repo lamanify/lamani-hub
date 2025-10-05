@@ -20,7 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -565,141 +565,155 @@ export default function Settings() {
 
           {/* Tab 3: API Access */}
           <TabsContent value="api" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>API Key</CardTitle>
-                <CardDescription>
-                  Use this key to integrate LamaniHub with your website or automation tools
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Your API Key</Label>
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Input
-                        value={
-                          showApiKey
-                            ? tenantData.api_key || ""
-                            : "••••••••••••••••••••••••••••••••"
-                        }
-                        readOnly
-                        className="pr-10 font-mono text-sm"
-                      />
+            <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+              <Database className="h-4 w-4 text-blue-600" />
+              <AlertDescription>
+                <strong className="text-blue-900 dark:text-blue-100">
+                  API Integration Available
+                </strong>
+                <p className="mt-1 text-blue-800 dark:text-blue-200">
+                  Connect your website forms, CRM tools, or automation platforms directly to LamaniHub.
+                </p>
+              </AlertDescription>
+            </Alert>
+
+            {!isAdmin && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Admin Access Required</AlertTitle>
+                <AlertDescription>
+                  API keys contain sensitive information. Only clinic administrators can view and manage API access.
+                  Please contact your clinic administrator for API integration details.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>API Key</CardTitle>
+                  <CardDescription>
+                    Use this key to integrate LamaniHub with your website or automation tools
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Your API Key</Label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          value={
+                            showApiKey
+                              ? tenantData?.api_key || ""
+                              : "••••••••••••••••••••••••••••••••"
+                          }
+                          readOnly
+                          className="pr-10 font-mono text-sm"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-0 top-0 h-full"
+                          onClick={() => setShowApiKey(!showApiKey)}
+                        >
+                          {showApiKey ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
                       <Button
-                        type="button"
-                        variant="ghost"
+                        variant="outline"
                         size="icon"
-                        className="absolute right-0 top-0 h-full"
-                        onClick={() => setShowApiKey(!showApiKey)}
+                        onClick={handleCopyApiKey}
                       >
-                        {showApiKey ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
+                        <Copy className="h-4 w-4" />
                       </Button>
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      Keep this key secret. Anyone with this key can create leads in your account.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t">
                     <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={handleCopyApiKey}
+                      variant="destructive"
+                      onClick={() => setRegenerateDialogOpen(true)}
+                      disabled={regenerateApiKeyMutation.isPending}
                     >
-                      <Copy className="h-4 w-4" />
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Regenerate API Key
                     </Button>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Keep this key secret. Anyone with this key can create leads in your account.
-                  </p>
-                </div>
 
-                {isAdmin && (
-                  <>
-                    <div className="pt-4 border-t">
-                      <Button
-                        variant="destructive"
-                        onClick={() => setRegenerateDialogOpen(true)}
-                        disabled={regenerateApiKeyMutation.isPending}
-                      >
-                        <RefreshCw className="h-4 w-4 mr-2" />
-                        Regenerate API Key
-                      </Button>
-                    </div>
-
-                    <AlertDialog
-                      open={regenerateDialogOpen}
-                      onOpenChange={setRegenerateDialogOpen}
-                    >
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Regenerate API Key?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will invalidate your current API key. Any integrations using the old key will stop working. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => regenerateApiKeyMutation.mutate()}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Regenerate
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </>
-                )}
-
-                {!isAdmin && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      Only administrators can regenerate the API key
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>API Integration</CardTitle>
-                <CardDescription>
-                  Connect LamaniHub with your website or automation tools
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Use the API to automatically create leads from your website forms, WordPress, n8n, Zapier, and more.
-                </p>
-
-                <div className="p-4 bg-muted rounded-lg font-mono text-sm overflow-x-auto">
-                  <code className="text-xs">
-                    curl -X POST {import.meta.env.VITE_SUPABASE_URL}/functions/v1/lead-intake \<br />
-                    &nbsp;&nbsp;-H "Content-Type: application/json" \<br />
-                    &nbsp;&nbsp;-H "x-api-key: YOUR_API_KEY" \<br />
-                    &nbsp;&nbsp;-d '{`{`}<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;"name": "Patient Name",<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;"phone": "0123456789",<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;"email": "patient@example.com",<br />
-                    &nbsp;&nbsp;&nbsp;&nbsp;"consent": true<br />
-                    &nbsp;&nbsp;{`}`}'
-                  </code>
-                </div>
-
-                <Button variant="outline" asChild>
-                  <a
-                    href="https://docs.lovable.dev"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <AlertDialog
+                    open={regenerateDialogOpen}
+                    onOpenChange={setRegenerateDialogOpen}
                   >
-                    <ExternalLink className="h-4 w-4 mr-2" />
-                    View API Documentation
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Regenerate API Key?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will invalidate your current API key. Any integrations using the old key will stop working. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => regenerateApiKeyMutation.mutate()}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Regenerate
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </CardContent>
+              </Card>
+            )}
+
+            {isAdmin && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>API Integration</CardTitle>
+                  <CardDescription>
+                    Connect LamaniHub with your website or automation tools
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Use the API to automatically create leads from your website forms, WordPress, n8n, Zapier, and more.
+                  </p>
+
+                  <div className="p-4 bg-muted rounded-lg font-mono text-sm overflow-x-auto">
+                    <code className="text-xs">
+                      curl -X POST {import.meta.env.VITE_SUPABASE_URL}/functions/v1/lead-intake \<br />
+                      &nbsp;&nbsp;-H "Content-Type: application/json" \<br />
+                      &nbsp;&nbsp;-H "x-api-key: YOUR_API_KEY" \<br />
+                      &nbsp;&nbsp;-d '{`{`}<br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"name": "Patient Name",<br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"phone": "0123456789",<br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"email": "patient@example.com",<br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"consent": true<br />
+                      &nbsp;&nbsp;{`}`}'
+                    </code>
+                  </div>
+
+                  <Button variant="outline" asChild>
+                    <a
+                      href="https://docs.lovable.dev"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View API Documentation
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

@@ -429,6 +429,23 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      get_tenant_safe: {
+        Args: { p_user_id: string }
+        Returns: {
+          comp_expires_at: string
+          created_at: string
+          grace_period_ends_at: string
+          id: string
+          is_comped: boolean
+          name: string
+          plan_code: string
+          plan_type: string
+          subscription_current_period_end: string
+          subscription_status: Database["public"]["Enums"]["subscription_status"]
+          trial_ends_at: string
+          updated_at: string
+        }[]
+      }
       get_user_tenant_id: {
         Args: { _user_id: string }
         Returns: string

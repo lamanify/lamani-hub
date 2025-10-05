@@ -69,18 +69,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const fetchTenantSubscription = async (tenantId: string, planType: string) => {
+  const fetchTenantSubscription = async (tenantId: string, planType: string, userRole?: string) => {
     try {
       setSubscriptionLoading(true);
 
-      // Fetch tenant
-      const { data: tenantData, error: tenantError } = await supabase
-        .from('tenants')
-        .select('id, name, subscription_status, plan_type, created_at, grace_period_ends_at, subscription_current_period_end')
-        .eq('id', tenantId)
-        .single();
+      // Determine if user is admin
+      const isAdminUser = userRole === 'super_admin' || userRole === 'clinic_admin';
 
-      if (tenantError) throw tenantError;
+      let tenantData;
+      if (isAdminUser) {
+        // Admins can see all tenant fields
+        const { data, error } = await supabase
+          .from('tenants')
+          .select('*')
+          .eq('id', tenantId)
+          .single();
+        if (error) throw error;
+        tenantData = data;
+      } else {
+        // Non-admins only see non-sensitive fields via safe function
+        const { data, error } = await supabase
+          .rpc('get_tenant_safe', { p_user_id: user?.id })
+          .single();
+        if (error) throw error;
+        tenantData = data;
+      }
 
       // Fetch subscription config
       const { data: configData, error: configError } = await supabase
@@ -131,8 +144,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setProfile(profileData);
 
-      // Fetch tenant and subscription config
-      await fetchTenantSubscription(profileData.tenant_id, 'default');
+      // Fetch tenant and subscription config (pass role for security filtering)
+      await fetchTenantSubscription(profileData.tenant_id, 'default', roleData.role);
     } catch (error) {
       console.error('Error fetching profile/role:', error);
       setSubscriptionLoading(false);
@@ -141,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshSubscription = async () => {
     if (profile?.tenant_id && tenant?.plan_type) {
-      await fetchTenantSubscription(profile.tenant_id, tenant.plan_type);
+      await fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
     }
   };
 
