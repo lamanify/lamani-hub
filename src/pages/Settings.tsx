@@ -190,36 +190,35 @@ export default function Settings() {
     },
   });
 
-  // Regenerate API key mutation
+  // Regenerate API key mutation (using secure edge function)
   const regenerateApiKeyMutation = useMutation({
     mutationFn: async () => {
-      // Generate new API key on client side
-      const newApiKey = `lh_${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')}`;
+      const { data: { session } } = await supabase.auth.getSession();
       
-      const { error: updateError } = await supabase
-        .from("tenants")
-        .update({
-          api_key: newApiKey,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", tenant?.id);
+      if (!session) {
+        throw new Error('No active session');
+      }
 
-      if (updateError) throw updateError;
-
-      // Audit log
-      await supabase.from("audit_log").insert({
-        tenant_id: tenant?.id,
-        user_id: user?.id,
-        action: "api_key_regenerated",
-        resource_id: tenant?.id,
-        details: {},
+      const { data, error } = await supabase.functions.invoke('regenerate-api-key', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Failed to regenerate API key');
+
+      return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
-      toast.success("API key regenerated successfully");
+      
+      // Show success with grace period warning
+      toast.success(
+        `API key regenerated! Old key (ending ${data.old_key_last_4}) remains valid for ${data.grace_period_minutes} minutes.`,
+        { duration: 10000 }
+      );
+      
       setRegenerateDialogOpen(false);
     },
     onError: (error: any) => {

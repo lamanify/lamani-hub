@@ -12,6 +12,56 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
 );
 
+// Rate limiting configuration
+const RATE_LIMIT_PER_IP = 100; // requests per hour per IP
+const RATE_LIMIT_PER_TENANT = 1000; // leads per day per tenant
+const RATE_LIMIT_WINDOW_IP = 60 * 60 * 1000; // 1 hour in ms
+const RATE_LIMIT_WINDOW_TENANT = 24 * 60 * 60 * 1000; // 24 hours in ms
+
+// In-memory rate limit tracking (resets on function cold start)
+const ipRateLimits = new Map<string, { count: number; resetAt: number }>();
+const tenantRateLimits = new Map<string, { count: number; resetAt: number }>();
+
+// Check rate limit for IP
+function checkIpRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const record = ipRateLimits.get(ip);
+
+  if (!record || now > record.resetAt) {
+    // New window
+    ipRateLimits.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_IP });
+    return { allowed: true };
+  }
+
+  if (record.count >= RATE_LIMIT_PER_IP) {
+    const retryAfter = Math.ceil((record.resetAt - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  record.count++;
+  return { allowed: true };
+}
+
+// Check rate limit for tenant
+function checkTenantRateLimit(tenantId: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const record = tenantRateLimits.get(tenantId);
+
+  if (!record || now > record.resetAt) {
+    // New window
+    tenantRateLimits.set(tenantId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_TENANT });
+    return { allowed: true };
+  }
+
+  if (record.count >= RATE_LIMIT_PER_TENANT) {
+    const retryAfter = Math.ceil((record.resetAt - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  record.count++;
+  return { allowed: true };
+}
+
 // Reserved keys that cannot be used as custom properties
 const RESERVED_KEYS = [
   'id', 'tenant_id', 'created_at', 'updated_at', 'deleted_at',
@@ -182,7 +232,33 @@ serve(async (req) => {
   }
 
   try {
-    // 1. Verify API key
+    // 1. Get client IP for rate limiting
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0].trim() || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
+
+    // 2. Check IP rate limit
+    const ipRateCheck = checkIpRateLimit(clientIp);
+    if (!ipRateCheck.allowed) {
+      console.error(`IP rate limit exceeded for ${clientIp}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded',
+          message: `Too many requests from this IP. Max ${RATE_LIMIT_PER_IP} requests per hour.`,
+          retry_after_seconds: ipRateCheck.retryAfter
+        }),
+        { 
+          status: 429,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': String(ipRateCheck.retryAfter || 3600)
+          } 
+        }
+      );
+    }
+
+    // 3. Verify API key
     const apiKey = req.headers.get('x-api-key');
 
     if (!apiKey) {
@@ -218,7 +294,28 @@ serve(async (req) => {
 
     console.log(`Tenant found: ${tenant.name} (${tenant.id})`);
 
-    // 3. Check subscription status
+    // 4. Check tenant rate limit
+    const tenantRateCheck = checkTenantRateLimit(tenant.id);
+    if (!tenantRateCheck.allowed) {
+      console.error(`Tenant rate limit exceeded for ${tenant.id}`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Tenant rate limit exceeded',
+          message: `Maximum ${RATE_LIMIT_PER_TENANT} leads per day reached. Contact support to increase limit.`,
+          retry_after_seconds: tenantRateCheck.retryAfter
+        }),
+        { 
+          status: 429,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': String(tenantRateCheck.retryAfter || 86400)
+          } 
+        }
+      );
+    }
+
+    // 5. Check subscription status
     if (tenant.subscription_status !== 'active' && tenant.subscription_status !== 'trial') {
       console.error(`Subscription inactive for tenant ${tenant.id}: ${tenant.subscription_status}`);
       return new Response(
@@ -233,7 +330,7 @@ serve(async (req) => {
       );
     }
 
-    // 4. Parse request body
+    // 6. Parse request body
     let body: any;
     try {
       body = await req.json();
@@ -248,7 +345,7 @@ serve(async (req) => {
       );
     }
 
-    // 5. Extract required fields and custom fields
+    // 7. Extract required fields and custom fields
     const { name, phone, email, consent, source, ...extras } = body;
 
     // Check payload size for custom fields (max 64KB)
@@ -323,7 +420,7 @@ serve(async (req) => {
       );
     }
 
-    // 6. Validate and normalize phone
+    // 8. Validate and normalize phone
     let normalizedPhone: string;
     try {
       normalizedPhone = normalizePhone(phone);
@@ -345,7 +442,7 @@ serve(async (req) => {
       );
     }
 
-    // 7. Validate email format
+    // 9. Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const trimmedEmail = email.toLowerCase().trim();
     
@@ -373,7 +470,7 @@ serve(async (req) => {
       );
     }
 
-    // 8. Check for duplicates (by phone or email)
+    // 10. Check for duplicates (by phone or email)
     const { data: existingLead } = await supabase
       .from('leads')
       .select('id')
@@ -396,14 +493,9 @@ serve(async (req) => {
       );
     }
 
-    // 9. Get client IP for consent logging
-    const clientIp = req.headers.get('x-forwarded-for') || 
-                     req.headers.get('x-real-ip') || 
-                     'unknown';
-
     console.log(`Creating lead for tenant ${tenant.id}`);
 
-    // 10. Upsert custom properties first
+    // 11. Upsert custom properties first
     if (Object.keys(extras).length > 0) {
       try {
         await upsertProperties(supabase, tenant.id, 'lead', extras);
@@ -422,7 +514,7 @@ serve(async (req) => {
       }
     }
 
-    // 11. Sanitize and prepare custom fields
+    // 12. Sanitize and prepare custom fields
     const custom: Record<string, unknown> = {};
     for (const [rawKey, value] of Object.entries(extras)) {
       const key = sanitizeKey(rawKey);
@@ -433,7 +525,7 @@ serve(async (req) => {
 
     console.log(`Custom fields prepared: ${Object.keys(custom).length} fields`);
 
-    // 12. Insert lead with custom fields
+    // 13. Insert lead with custom fields
     const { data: lead, error: insertError } = await supabase
       .from('leads')
       .insert({
@@ -468,7 +560,7 @@ serve(async (req) => {
 
     console.log(`Lead created successfully: ${lead.id}`);
 
-    // 13. Log webhook event for audit trail
+    // 14. Log webhook event for audit trail
     await supabase.from('webhook_events').insert({
       tenant_id: tenant.id,
       source: source || 'api',
@@ -478,7 +570,7 @@ serve(async (req) => {
       ip_address: clientIp,
     });
 
-    // 14. Log audit entry
+    // 15. Log audit entry
     await supabase.from('audit_log').insert({
       tenant_id: tenant.id,
       user_id: null, // System/API action
@@ -493,7 +585,7 @@ serve(async (req) => {
       },
     });
 
-    // 15. Return success response
+    // 16. Return success response
     return new Response(
       JSON.stringify({
         success: true,
