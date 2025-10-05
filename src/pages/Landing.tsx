@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Heart, Shield, Users } from "lucide-react";
+import logo from "@/assets/lamanify-logo.png";
 
 export default function Landing() {
   return (
@@ -9,10 +10,8 @@ export default function Landing() {
       <section className="container mx-auto px-6 py-20 lg:py-32">
         <div className="max-w-4xl mx-auto text-center space-y-8">
           {/* Logo / Brand */}
-          <div className="inline-block">
-            <h1 className="text-5xl lg:text-6xl font-semibold text-foreground">
-              Lamani<span className="text-primary">Hub</span>
-            </h1>
+          <div className="inline-block mb-4">
+            <img src={logo} alt="LamaniHub" className="h-16 lg:h-20 mx-auto" />
           </div>
 
           {/* Tagline */}

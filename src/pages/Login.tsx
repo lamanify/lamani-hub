@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
+import logo from "@/assets/lamanify-logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -36,9 +37,7 @@ export default function Login() {
         {/* Logo */}
         <div className="text-center">
           <Link to="/">
-            <h1 className="text-3xl font-semibold text-foreground">
-              Lamani<span className="text-primary">Hub</span>
-            </h1>
+            <img src={logo} alt="LamaniHub" className="h-12 mx-auto" />
           </Link>
         </div>
 

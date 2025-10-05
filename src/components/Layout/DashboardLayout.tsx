@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LayoutDashboard, Users, Settings, CreditCard, LogOut, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import logo from "@/assets/lamanify-logo.png";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -45,9 +46,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Logo / Brand */}
         <div className="flex items-center justify-between h-16 px-6 border-b border-border">
           <Link to="/dashboard" className="flex items-center">
-            <h1 className="text-xl font-semibold text-foreground">
-              Lamani<span className="text-primary">Hub</span>
-            </h1>
+            <img src={logo} alt="LamaniHub" className="h-8" />
           </Link>
           <Button
             variant="ghost"
