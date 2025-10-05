@@ -17,6 +17,7 @@ interface Tenant {
   plan_type: string;
   created_at: string;
   grace_period_ends_at: string | null;
+  subscription_current_period_end: string | null;
 }
 
 interface SubscriptionConfig {
@@ -65,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Fetch tenant
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
-        .select('id, name, subscription_status, plan_type, created_at, grace_period_ends_at')
+        .select('id, name, subscription_status, plan_type, created_at, grace_period_ends_at, subscription_current_period_end')
         .eq('id', tenantId)
         .single();
 
