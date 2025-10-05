@@ -216,7 +216,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (authData.user) {
       await fetchProfileAndRole(authData.user.id);
-      navigate('/dashboard');
+      // Don't navigate here - let the Login component's useEffect handle it
+      // after state is fully updated to avoid race conditions with SubscriptionGuard
     }
   };
 

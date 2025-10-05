@@ -13,22 +13,24 @@ import logo from "@/assets/lamanify-logo.png";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const { user, role, loading: authLoading, login } = useAuth();
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    // Wait for auth to finish loading, then redirect authenticated users
+    if (!authLoading && user) {
       navigate("/dashboard");
     }
-  }, [user, navigate]);
+  }, [user, role, authLoading, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
       await login(email, password);
@@ -44,7 +46,7 @@ export default function Login() {
         toast.error("Unable to connect, please try again");
       }
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -110,8 +112,8 @@ export default function Login() {
                 </Label>
               </div>
 
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
+                {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Signing in...
