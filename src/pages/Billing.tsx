@@ -143,12 +143,23 @@ export default function Billing() {
           </Alert>
         );
       case 'cancelled':
+      case 'canceled':
         return (
           <Alert variant="destructive">
             <XCircle className="h-4 w-4" />
             <AlertTitle>Subscription Cancelled</AlertTitle>
             <AlertDescription>
               Your subscription has been cancelled. Reactivate your subscription to continue using LamaniHub.
+            </AlertDescription>
+          </Alert>
+        );
+      case 'inactive':
+        return (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Subscription Required</AlertTitle>
+            <AlertDescription>
+              Please activate your subscription to access LamaniHub features.
             </AlertDescription>
           </Alert>
         );
@@ -168,6 +179,7 @@ export default function Billing() {
 
     switch (tenant.subscription_status) {
       case 'trial':
+      case 'trialing':
         return (
           <div className="space-y-6">
             <div className="flex flex-col items-center text-center space-y-4">
@@ -348,8 +360,60 @@ export default function Billing() {
           </div>
         );
 
+      case 'comped':
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-purple-100 dark:bg-purple-900/20">
+                <CheckCircle className="h-8 w-8 text-purple-600 dark:text-purple-400" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-semibold text-foreground">Complimentary Access</h3>
+                <p className="text-muted-foreground mt-2">
+                  You have complimentary access to LamaniHub
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 py-6">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Plan</span>
+                <span className="font-medium text-foreground">Complimentary</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Price</span>
+                <span className="font-medium text-foreground">RM 0.00</span>
+              </div>
+              {tenant.comp_expires_at && (
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Access expires</span>
+                  <span className="font-medium text-foreground">
+                    {format(new Date(tenant.comp_expires_at), 'MMM dd, yyyy')}
+                  </span>
+                </div>
+              )}
+              {tenant.comp_reason && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Reason:</strong> {tenant.comp_reason}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertTitle>Full Access</AlertTitle>
+              <AlertDescription>
+                You have access to all LamaniHub features during your complimentary period.
+              </AlertDescription>
+            </Alert>
+          </div>
+        );
+
       case 'suspended':
       case 'cancelled':
+      case 'canceled':
         return (
           <div className="space-y-6">
             <div className="flex flex-col items-center text-center space-y-4">
@@ -398,6 +462,68 @@ export default function Billing() {
           </div>
         );
 
+      case 'inactive':
+        return (
+          <div className="space-y-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+                <Clock className="h-8 w-8 text-gray-600 dark:text-gray-400" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-semibold text-foreground">Subscription Required</h3>
+                <p className="text-muted-foreground mt-2">
+                  Start your LamaniHub subscription to access all features
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 py-6">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="text-foreground">Unlimited leads</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="text-foreground">All CRM features</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="text-foreground">PDPA compliance tools</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-primary flex-shrink-0" />
+                <span className="text-foreground">Email support</span>
+              </div>
+            </div>
+
+            <div className="text-center py-4 border-t">
+              <p className="text-lg font-medium text-foreground">
+                <span className="text-primary">RM 299/month</span>
+              </p>
+            </div>
+
+            <Button 
+              onClick={handleStartCheckout} 
+              disabled={checkoutLoading}
+              className="w-full bg-primary hover:bg-primary/90"
+              size="lg"
+            >
+              {checkoutLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Starting checkout...
+                </>
+              ) : (
+                'Start Subscription'
+              )}
+            </Button>
+
+            <p className="text-center text-sm text-muted-foreground">
+              RM 299/month • Cancel anytime
+            </p>
+          </div>
+        );
+
       default:
         return (
           <div className="text-center py-12">
@@ -426,10 +552,12 @@ export default function Billing() {
           <CardHeader>
             <CardTitle>Current Plan</CardTitle>
             <CardDescription>
-              {tenant?.subscription_status === 'trial' && 'You are currently on the free trial'}
+              {(tenant?.subscription_status === 'trial' || tenant?.subscription_status === 'trialing') && 'You are currently on the free trial'}
               {tenant?.subscription_status === 'active' && 'You are subscribed to LamaniHub CRM'}
+              {tenant?.subscription_status === 'comped' && 'You have complimentary access'}
               {tenant?.subscription_status === 'past_due' && 'Payment issue detected'}
-              {(tenant?.subscription_status === 'suspended' || tenant?.subscription_status === 'cancelled') && 
+              {tenant?.subscription_status === 'inactive' && 'Activate your subscription to get started'}
+              {(tenant?.subscription_status === 'suspended' || tenant?.subscription_status === 'cancelled' || tenant?.subscription_status === 'canceled') && 
                 'Your subscription is inactive'}
             </CardDescription>
           </CardHeader>
