@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,6 +72,196 @@ const RESERVED_KEYS = [
   'password', 'nric', 'ic', 'passport', 'diagnosis',
   'select', 'insert', 'update', 'delete', 'drop', 'table', 'where'
 ];
+
+// Field validation constants (Phase 2: Enhanced Security)
+const MAX_STRING_LENGTH = 1000;
+const MAX_URL_LENGTH = 2048;
+const MAX_EMAIL_LENGTH = 255;
+const MAX_PHONE_LENGTH = 20;
+const MAX_NUMBER_VALUE = 999999999999; // 12 digits
+const MIN_NUMBER_VALUE = -999999999999;
+
+// Email validation
+function isValidEmail(email: string): boolean {
+  if (!email || email.length > MAX_EMAIL_LENGTH) return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) return false;
+  // Reject emails with HTML or script tags
+  if (/<[^>]*>/i.test(email)) return false;
+  return true;
+}
+
+// URL validation
+function isValidUrl(url: string): boolean {
+  if (!url || url.length > MAX_URL_LENGTH) return false;
+  try {
+    const parsed = new URL(url);
+    // Only allow http/https protocols
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    // Reject javascript:, data:, file: protocols
+    if (['javascript:', 'data:', 'file:'].includes(parsed.protocol.toLowerCase())) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// String sanitization
+function sanitizeString(str: string): string {
+  if (typeof str !== 'string') return String(str);
+  
+  // Remove HTML tags and script content
+  let sanitized = str.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+  sanitized = sanitized.replace(/<[^>]*>/g, '');
+  
+  // Remove event handlers
+  sanitized = sanitized.replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
+  
+  // Trim whitespace
+  sanitized = sanitized.trim();
+  
+  // Truncate to max length
+  if (sanitized.length > MAX_STRING_LENGTH) {
+    sanitized = sanitized.substring(0, MAX_STRING_LENGTH);
+  }
+  
+  return sanitized;
+}
+
+// Field validation by type
+function validateFieldValue(
+  key: string, 
+  value: unknown, 
+  dataType: string
+): { valid: boolean; error?: string; sanitized: unknown } {
+  
+  // Handle null/undefined
+  if (value === null || value === undefined) {
+    return { valid: true, sanitized: null };
+  }
+
+  switch (dataType) {
+    case 'email': {
+      const emailStr = String(value);
+      if (!isValidEmail(emailStr)) {
+        return { 
+          valid: false, 
+          error: `Invalid email format in field '${key}': ${emailStr}`,
+          sanitized: null
+        };
+      }
+      return { valid: true, sanitized: sanitizeString(emailStr).toLowerCase() };
+    }
+
+    case 'phone': {
+      const phoneStr = String(value);
+      if (phoneStr.length > MAX_PHONE_LENGTH) {
+        return { 
+          valid: false, 
+          error: `Phone number in field '${key}' exceeds maximum length of ${MAX_PHONE_LENGTH}`,
+          sanitized: null
+        };
+      }
+      try {
+        const normalized = normalizePhone(phoneStr);
+        if (!isValidMalaysianPhone(normalized)) {
+          return { 
+            valid: false, 
+            error: `Invalid phone format in field '${key}': ${phoneStr}`,
+            sanitized: null
+          };
+        }
+        return { valid: true, sanitized: normalized };
+      } catch (e) {
+        return { 
+          valid: false, 
+          error: `Invalid phone format in field '${key}': ${phoneStr}`,
+          sanitized: null
+        };
+      }
+    }
+
+    case 'url': {
+      const urlStr = String(value);
+      if (!isValidUrl(urlStr)) {
+        return { 
+          valid: false, 
+          error: `Invalid URL in field '${key}': URL must use http/https protocol and be under ${MAX_URL_LENGTH} characters`,
+          sanitized: null
+        };
+      }
+      return { valid: true, sanitized: sanitizeString(urlStr) };
+    }
+
+    case 'number': {
+      const num = typeof value === 'number' ? value : parseFloat(String(value));
+      if (isNaN(num)) {
+        return { 
+          valid: false, 
+          error: `Invalid number in field '${key}': ${value}`,
+          sanitized: null
+        };
+      }
+      if (num > MAX_NUMBER_VALUE || num < MIN_NUMBER_VALUE) {
+        return { 
+          valid: false, 
+          error: `Number in field '${key}' exceeds allowed range (${MIN_NUMBER_VALUE} to ${MAX_NUMBER_VALUE})`,
+          sanitized: null
+        };
+      }
+      return { valid: true, sanitized: num };
+    }
+
+    case 'date': {
+      const dateStr = String(value);
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) {
+        return { 
+          valid: false, 
+          error: `Invalid date format in field '${key}': ${dateStr}`,
+          sanitized: null
+        };
+      }
+      // Check reasonable date range (1900 - 2100)
+      const year = date.getFullYear();
+      if (year < 1900 || year > 2100) {
+        return { 
+          valid: false, 
+          error: `Date in field '${key}' is outside reasonable range (1900-2100)`,
+          sanitized: null
+        };
+      }
+      return { valid: true, sanitized: date.toISOString() };
+    }
+
+    case 'boolean': {
+      const boolVal = typeof value === 'boolean' ? value : 
+                     String(value).toLowerCase() === 'true';
+      return { valid: true, sanitized: boolVal };
+    }
+
+    case 'string':
+    default: {
+      const strVal = String(value);
+      if (strVal.length > MAX_STRING_LENGTH) {
+        return { 
+          valid: false, 
+          error: `String value in field '${key}' exceeds maximum length of ${MAX_STRING_LENGTH} characters`,
+          sanitized: null
+        };
+      }
+      // Check for dangerous content
+      if (/<script/i.test(strVal) || /javascript:/i.test(strVal)) {
+        return { 
+          valid: false, 
+          error: `Field '${key}' contains potentially dangerous content`,
+          sanitized: null
+        };
+      }
+      return { valid: true, sanitized: sanitizeString(strVal) };
+    }
+  }
+}
 
 // Phone normalization utilities
 function normalizePhone(phone: string): string {
@@ -258,7 +449,7 @@ serve(async (req) => {
       );
     }
 
-    // 3. Verify API key
+    // 3. Verify API key (with bcrypt hash + grace period support)
     const apiKey = req.headers.get('x-api-key');
 
     if (!apiKey) {
@@ -272,17 +463,67 @@ serve(async (req) => {
       );
     }
 
-    console.log('Looking up tenant by API key');
+    console.log('Looking up tenant by API key prefix');
 
-    // 2. Look up tenant by API key
-    const { data: tenant, error: tenantError } = await supabase
+    // Extract prefix from API key (first 8 chars)
+    const apiKeyPrefix = apiKey.substring(0, 8);
+
+    // 2. Look up tenants by prefix
+    const { data: tenants, error: tenantError } = await supabase
       .from('tenants')
-      .select('id, name, subscription_status')
-      .eq('api_key', apiKey)
-      .single();
+      .select('id, name, subscription_status, api_key_hash, old_api_key_hash, old_api_key_expires_at')
+      .eq('api_key_prefix', apiKeyPrefix);
 
-    if (tenantError || !tenant) {
-      console.error('Invalid API key or tenant not found:', tenantError);
+    if (tenantError || !tenants || tenants.length === 0) {
+      console.error('Invalid API key prefix or tenant not found:', tenantError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid API key' }),
+        { 
+          status: 401, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log(`Found ${tenants.length} tenant(s) with prefix ${apiKeyPrefix}`);
+
+    // Verify hash for each tenant candidate
+    let tenant = null;
+    let usingOldKey = false;
+
+    for (const candidateTenant of tenants) {
+      // Try current key first
+      if (candidateTenant.api_key_hash) {
+        const currentKeyMatch = await bcrypt.compare(apiKey, candidateTenant.api_key_hash);
+        if (currentKeyMatch) {
+          tenant = candidateTenant;
+          console.log(`Tenant authenticated with current API key: ${tenant.name}`);
+          break;
+        }
+      }
+
+      // Try old key if not expired (grace period)
+      if (candidateTenant.old_api_key_hash && candidateTenant.old_api_key_expires_at) {
+        const now = new Date();
+        const expiresAt = new Date(candidateTenant.old_api_key_expires_at);
+        
+        if (now < expiresAt) {
+          const oldKeyMatch = await bcrypt.compare(apiKey, candidateTenant.old_api_key_hash);
+          if (oldKeyMatch) {
+            tenant = candidateTenant;
+            usingOldKey = true;
+            const minutesRemaining = Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60));
+            console.warn(`⚠️ Tenant ${tenant.name} using OLD API key (expires in ${minutesRemaining} minutes)`);
+            break;
+          }
+        } else {
+          console.log(`Old key for tenant ${candidateTenant.id} has expired`);
+        }
+      }
+    }
+
+    if (!tenant) {
+      console.error('API key hash verification failed for all candidates');
       return new Response(
         JSON.stringify({ error: 'Invalid API key' }),
         { 
@@ -293,6 +534,21 @@ serve(async (req) => {
     }
 
     console.log(`Tenant found: ${tenant.name} (${tenant.id})`);
+
+    // Log warning if using old key
+    if (usingOldKey) {
+      await supabase.from('audit_log').insert({
+        tenant_id: tenant.id,
+        user_id: null,
+        action: 'api_key_old_key_used',
+        resource_id: tenant.id,
+        details: {
+          used_at: new Date().toISOString(),
+          expires_at: tenant.old_api_key_expires_at,
+          warning: 'Using deprecated API key during grace period',
+        },
+      });
+    }
 
     // 4. Check tenant rate limit
     const tenantRateCheck = checkTenantRateLimit(tenant.id);
@@ -495,10 +751,45 @@ serve(async (req) => {
 
     console.log(`Creating lead for tenant ${tenant.id}`);
 
-    // 11. Upsert custom properties first
+    // 11. Validate and sanitize custom fields (Phase 2: Enhanced Security)
+    const validatedExtras: Record<string, unknown> = {};
+    
     if (Object.keys(extras).length > 0) {
+      console.log(`Validating ${Object.keys(extras).length} custom fields...`);
+      
+      for (const [rawKey, value] of Object.entries(extras)) {
+        // Infer data type
+        const dataType = inferType(rawKey, value);
+        
+        // Validate and sanitize the field
+        const validation = validateFieldValue(rawKey, value, dataType);
+        
+        if (!validation.valid) {
+          console.error(`Field validation failed: ${validation.error}`);
+          return new Response(
+            JSON.stringify({ 
+              error: 'Custom field validation failed',
+              field: rawKey,
+              details: validation.error
+            }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+            }
+          );
+        }
+        
+        // Use sanitized value
+        validatedExtras[rawKey] = validation.sanitized;
+      }
+      
+      console.log(`All custom fields validated and sanitized successfully`);
+    }
+
+    // 12. Upsert custom properties (using validated extras)
+    if (Object.keys(validatedExtras).length > 0) {
       try {
-        await upsertProperties(supabase, tenant.id, 'lead', extras);
+        await upsertProperties(supabase, tenant.id, 'lead', validatedExtras);
       } catch (error) {
         console.error('Failed to upsert properties:', error);
         return new Response(
@@ -514,18 +805,18 @@ serve(async (req) => {
       }
     }
 
-    // 12. Sanitize and prepare custom fields
+    // 13. Sanitize and prepare custom fields for storage
     const custom: Record<string, unknown> = {};
-    for (const [rawKey, value] of Object.entries(extras)) {
+    for (const [rawKey, value] of Object.entries(validatedExtras)) {
       const key = sanitizeKey(rawKey);
       if (key) {
-        custom[key] = value;
+        custom[key] = value; // Already sanitized by validation
       }
     }
 
     console.log(`Custom fields prepared: ${Object.keys(custom).length} fields`);
 
-    // 13. Insert lead with custom fields
+    // 14. Insert lead with custom fields
     const { data: lead, error: insertError } = await supabase
       .from('leads')
       .insert({
@@ -560,7 +851,7 @@ serve(async (req) => {
 
     console.log(`Lead created successfully: ${lead.id}`);
 
-    // 14. Log webhook event for audit trail
+    // 15. Log webhook event for audit trail
     await supabase.from('webhook_events').insert({
       tenant_id: tenant.id,
       source: source || 'api',
@@ -570,7 +861,7 @@ serve(async (req) => {
       ip_address: clientIp,
     });
 
-    // 15. Log audit entry
+    // 16. Log audit entry
     await supabase.from('audit_log').insert({
       tenant_id: tenant.id,
       user_id: null, // System/API action
@@ -585,7 +876,7 @@ serve(async (req) => {
       },
     });
 
-    // 16. Return success response
+    // 17. Return success response
     return new Response(
       JSON.stringify({
         success: true,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -71,14 +72,14 @@ serve(async (req) => {
       );
     }
 
-    // Get current tenant data
+    // Get current tenant data (including current hash for grace period)
     const { data: currentTenant } = await supabase
       .from('tenants')
-      .select('api_key')
+      .select('api_key_hash, api_key_prefix, old_api_key_hash')
       .eq('id', profile.tenant_id)
       .single();
 
-    const oldKeyLast4 = currentTenant?.api_key?.slice(-4) || 'unknown';
+    const oldKeyPrefix = currentTenant?.api_key_prefix || 'unknown';
 
     // Generate secure random API key using Web Crypto API
     const randomBytes = new Uint8Array(32);
@@ -88,13 +89,27 @@ serve(async (req) => {
       .join('')}`;
 
     console.log(`Regenerating API key for tenant: ${profile.tenant_id}`);
-    console.log(`Old key (last 4): ...${oldKeyLast4}`);
+    console.log(`Old key prefix: ${oldKeyPrefix}`);
 
-    // Update tenant with new API key
+    // Hash the new API key using bcrypt (salt rounds: 10)
+    const salt = await bcrypt.genSalt(10);
+    const newApiKeyHash = await bcrypt.hash(newApiKey, salt);
+    const newApiKeyPrefix = newApiKey.substring(0, 8);
+
+    console.log(`New API key hashed with bcrypt (cost factor: 10)`);
+
+    // Grace period: move current hash to old_api_key_hash
+    const gracePeriodMinutes = 60;
+    const gracePeriodExpiresAt = new Date(Date.now() + gracePeriodMinutes * 60 * 1000).toISOString();
+
+    // Update tenant with new hashed API key and grace period
     const { error: updateError } = await supabase
       .from('tenants')
       .update({
-        api_key: newApiKey,
+        api_key_hash: newApiKeyHash,
+        api_key_prefix: newApiKeyPrefix,
+        old_api_key_hash: currentTenant?.api_key_hash || null, // Store previous hash
+        old_api_key_expires_at: currentTenant?.api_key_hash ? gracePeriodExpiresAt : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', profile.tenant_id);
@@ -107,17 +122,19 @@ serve(async (req) => {
       );
     }
 
-    // Log to audit trail (masking the full keys)
+    // Log to audit trail (prefix only, never log full keys or hashes)
     await supabase.from('audit_log').insert({
       tenant_id: profile.tenant_id,
       user_id: user.id,
       action: 'api_key_regenerated',
       resource_id: profile.tenant_id,
       details: {
-        old_key_last_4: oldKeyLast4,
-        new_key_last_4: newApiKey.slice(-4),
+        old_key_prefix: oldKeyPrefix,
+        new_key_prefix: newApiKeyPrefix,
         regenerated_at: new Date().toISOString(),
         user_email: user.email,
+        grace_period_minutes: gracePeriodMinutes,
+        grace_period_expires_at: currentTenant?.api_key_hash ? gracePeriodExpiresAt : null,
       },
     });
 
@@ -127,11 +144,15 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         message: 'API key regenerated successfully',
-        api_key: newApiKey,
-        old_key_last_4: oldKeyLast4,
-        // Grace period: old key remains valid for 1 hour
-        grace_period_minutes: 60,
-        warning: 'Update your integrations within 1 hour. The old key will be invalidated after that.',
+        api_key: newApiKey, // Only time the plaintext key is returned
+        api_key_prefix: newApiKeyPrefix,
+        old_key_prefix: oldKeyPrefix,
+        grace_period_minutes: gracePeriodMinutes,
+        grace_period_expires_at: currentTenant?.api_key_hash ? gracePeriodExpiresAt : null,
+        warning: currentTenant?.api_key_hash 
+          ? `Your old API key will remain valid for ${gracePeriodMinutes} minutes. Update your integrations before ${gracePeriodExpiresAt}.`
+          : 'This is your first hashed API key. Store it securely - you will not be able to retrieve it again.',
+        security_note: 'API keys are now hashed with bcrypt for enhanced security. Only the hash is stored in the database.',
       }),
       { 
         status: 200, 
