@@ -15,6 +15,7 @@ import {
   Code,
   UserPlus,
   ArrowUpDown,
+  Download,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/Layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -106,6 +107,7 @@ export default function Leads() {
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [sortColumn, setSortColumn] = useState<string>("created_at");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [isExporting, setIsExporting] = useState(false);
 
   // Load selected custom columns from localStorage
   const [selectedCustomColumns, setSelectedCustomColumns] = useState<string[]>(() => {
@@ -238,6 +240,61 @@ export default function Leads() {
     setSourceFilter("all");
   };
 
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to export leads",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const response = await supabase.functions.invoke('export-leads', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.error) {
+        throw response.error;
+      }
+
+      // Convert the response data to a Blob
+      const csvContent = response.data;
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export successful",
+        description: `Successfully exported ${leads?.length || 0} leads to CSV`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export failed",
+        description: "Failed to export leads. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const hasFilters = searchTerm || statusFilter !== "all" || sourceFilter !== "all";
   const showEmpty = !isLoading && (!leads || leads.length === 0);
 
@@ -289,7 +346,18 @@ export default function Leads() {
               Manage your clinic's patient inquiries
             </p>
           </div>
-          <CreateLeadModal />
+          <div className="flex gap-2">
+            <Button
+              onClick={handleExport}
+              disabled={isExporting || !leads || leads.length === 0}
+              variant="outline"
+              size="default"
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {isExporting ? 'Exporting...' : 'Export'}
+            </Button>
+            <CreateLeadModal />
+          </div>
         </div>
 
         {/* Filters */}
