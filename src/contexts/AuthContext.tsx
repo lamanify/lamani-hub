@@ -127,13 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setRole(roleData.role);
 
-      // Super admins don't need profile or tenant data
-      if (roleData.role === 'super_admin') {
-        setSubscriptionLoading(false);
-        return;
-      }
-
-      // Fetch profile for non-super admins
+      // Fetch profile for all users (including super admins)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('user_id, tenant_id, full_name')
