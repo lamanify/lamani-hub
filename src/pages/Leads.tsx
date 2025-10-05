@@ -9,7 +9,6 @@ import {
   Trash, 
   Users, 
   Copy, 
-  MessageCircle,
   MoreVertical,
   FileText,
   Globe,
@@ -61,11 +60,11 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { ColumnPicker } from "@/components/ColumnPicker";
 import { CustomFieldCell } from "@/components/CustomFieldCell";
 import { CreateLeadModal } from "@/components/CreateLeadModal";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhone } from "@/lib/formatPhone";
-import { formatPhoneForWhatsApp } from "@/lib/utils/phoneNormalizer";
 import { formatDistanceToNow } from "date-fns";
 import { useDebounce } from "@/hooks/use-debounce";
 
@@ -231,11 +230,6 @@ export default function Leads() {
       title: "Copied",
       description: "Phone number copied to clipboard",
     });
-  };
-
-  const openWhatsApp = (phone: string) => {
-    const cleanPhone = formatPhoneForWhatsApp(phone);
-    window.open(`https://wa.me/${cleanPhone}`, "_blank");
   };
 
   const clearFilters = () => {
@@ -454,27 +448,18 @@ export default function Leads() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{formatPhone(lead.phone)}</span>
-                          <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex gap-1">
+                            <WhatsAppButton phone={lead.phone} variant="icon" />
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
                                   variant="ghost"
                                   size="icon"
                                   className="h-7 w-7"
-                                  onClick={() => openWhatsApp(lead.phone)}
-                                >
-                                  <MessageCircle className="h-3.5 w-3.5 text-green-600" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>WhatsApp</TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={() => copyToClipboard(lead.phone)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    copyToClipboard(lead.phone);
+                                  }}
                                 >
                                   <Copy className="h-3.5 w-3.5" />
                                 </Button>
