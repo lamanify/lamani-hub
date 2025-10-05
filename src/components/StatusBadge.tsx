@@ -1,49 +1,86 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
+export type LeadStatus =
+  | "new_inquiry"
+  | "contact_attempted"
+  | "contacted"
+  | "appointment_scheduled"
+  | "consultation_complete"
+  | "treatment_in_progress"
+  | "inactive"
+  | "disqualified";
+
 interface StatusBadgeProps {
-  status: string;
+  status: LeadStatus;
+  size?: "sm" | "default" | "lg";
   onClick?: () => void;
   className?: string;
 }
 
-const statusConfig: Record<string, { label: string; variant: string; className: string }> = {
-  new_inquiry: { 
-    label: "New Inquiry", 
-    variant: "default",
-    className: "bg-blue-100 text-blue-800 hover:bg-blue-200"
+const STATUS_CONFIG: Record<
+  LeadStatus,
+  {
+    label: string;
+    bgColor: string;
+    textColor: string;
+  }
+> = {
+  new_inquiry: {
+    label: "New Inquiry",
+    bgColor: "bg-blue-100",
+    textColor: "text-blue-700",
   },
-  contacted: { 
-    label: "Contacted", 
-    variant: "secondary",
-    className: "bg-purple-100 text-purple-800 hover:bg-purple-200"
+  contact_attempted: {
+    label: "Contact Attempted",
+    bgColor: "bg-yellow-100",
+    textColor: "text-yellow-700",
   },
-  qualified: { 
-    label: "Qualified", 
-    variant: "default",
-    className: "bg-green-100 text-green-800 hover:bg-green-200"
+  contacted: {
+    label: "Contacted",
+    bgColor: "bg-green-100",
+    textColor: "text-green-700",
   },
-  converted: { 
-    label: "Converted", 
-    variant: "default",
-    className: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200"
+  appointment_scheduled: {
+    label: "Appointment Scheduled",
+    bgColor: "bg-purple-100",
+    textColor: "text-purple-700",
   },
-  lost: { 
-    label: "Lost", 
-    variant: "destructive",
-    className: "bg-red-100 text-red-800 hover:bg-red-200"
+  consultation_complete: {
+    label: "Consultation Complete",
+    bgColor: "bg-indigo-100",
+    textColor: "text-indigo-700",
+  },
+  treatment_in_progress: {
+    label: "Treatment In Progress",
+    bgColor: "bg-pink-100",
+    textColor: "text-pink-700",
+  },
+  inactive: {
+    label: "Inactive",
+    bgColor: "bg-gray-100",
+    textColor: "text-gray-700",
+  },
+  disqualified: {
+    label: "Disqualified",
+    bgColor: "bg-red-100",
+    textColor: "text-red-700",
   },
 };
 
-export function StatusBadge({ status, onClick, className }: StatusBadgeProps) {
-  const config = statusConfig[status] || statusConfig.new_inquiry;
+export function StatusBadge({ status, size = "default", onClick, className }: StatusBadgeProps) {
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG.new_inquiry;
 
   return (
     <Badge
-      variant="secondary"
+      variant="outline"
       className={cn(
-        "cursor-pointer transition-colors font-medium",
-        config.className,
+        "font-medium border-0 transition-colors",
+        config.bgColor,
+        config.textColor,
+        size === "sm" && "text-xs px-2 py-0.5",
+        size === "lg" && "text-base px-3 py-1",
+        onClick && "cursor-pointer hover:opacity-80",
         className
       )}
       onClick={onClick}
@@ -51,4 +88,12 @@ export function StatusBadge({ status, onClick, className }: StatusBadgeProps) {
       {config.label}
     </Badge>
   );
+}
+
+export function getStatusLabel(status: LeadStatus): string {
+  return STATUS_CONFIG[status]?.label || "Unknown";
+}
+
+export function getAllStatuses(): LeadStatus[] {
+  return Object.keys(STATUS_CONFIG) as LeadStatus[];
 }

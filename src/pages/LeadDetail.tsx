@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 import { formatDistanceToNow, format } from "date-fns";
 import {
   ArrowLeft,
@@ -45,8 +44,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge, type LeadStatus } from "@/components/StatusBadge";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -58,7 +58,7 @@ interface Lead {
   name: string;
   phone: string;
   email: string;
-  status: string;
+  status: LeadStatus;
   source: string | null;
   consent_given: boolean;
   consent_timestamp: string | null;
@@ -268,9 +268,10 @@ export default function LeadDetail() {
     onSuccess: (_, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ["lead", id] });
       queryClient.invalidateQueries({ queryKey: ["audit", id] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast({
         title: "Status updated",
-        description: `Status changed to ${newStatus}`,
+        description: `Status changed to ${newStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
       });
       setStatusChanging(false);
     },
@@ -444,12 +445,15 @@ export default function LeadDetail() {
                       <SelectTrigger className="w-full mt-1">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-background z-50">
                         <SelectItem value="new_inquiry">New Inquiry</SelectItem>
+                        <SelectItem value="contact_attempted">Contact Attempted</SelectItem>
                         <SelectItem value="contacted">Contacted</SelectItem>
-                        <SelectItem value="qualified">Qualified</SelectItem>
-                        <SelectItem value="converted">Converted</SelectItem>
-                        <SelectItem value="lost">Lost</SelectItem>
+                        <SelectItem value="appointment_scheduled">Appointment Scheduled</SelectItem>
+                        <SelectItem value="consultation_complete">Consultation Complete</SelectItem>
+                        <SelectItem value="treatment_in_progress">Treatment In Progress</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="disqualified">Disqualified</SelectItem>
                       </SelectContent>
                     </Select>
                     {statusChanging && (

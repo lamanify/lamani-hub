@@ -56,7 +56,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
-import { StatusBadge } from "@/components/StatusBadge";
+import { StatusBadge, type LeadStatus } from "@/components/StatusBadge";
 import { ColumnPicker } from "@/components/ColumnPicker";
 import { CustomFieldCell } from "@/components/CustomFieldCell";
 import { CreateLeadModal } from "@/components/CreateLeadModal";
@@ -73,7 +73,7 @@ interface Lead {
   name: string;
   phone: string;
   email: string | null;
-  status: string;
+  status: LeadStatus;
   source: string | null;
   created_at: string;
   custom: Record<string, any> | null;
@@ -308,16 +308,19 @@ export default function Leads() {
 
           <div className="flex gap-2">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-background z-50">
                 <SelectItem value="all">All Statuses</SelectItem>
                 <SelectItem value="new_inquiry">New Inquiry</SelectItem>
+                <SelectItem value="contact_attempted">Contact Attempted</SelectItem>
                 <SelectItem value="contacted">Contacted</SelectItem>
-                <SelectItem value="qualified">Qualified</SelectItem>
-                <SelectItem value="converted">Converted</SelectItem>
-                <SelectItem value="lost">Lost</SelectItem>
+                <SelectItem value="appointment_scheduled">Appointment Scheduled</SelectItem>
+                <SelectItem value="consultation_complete">Consultation Complete</SelectItem>
+                <SelectItem value="treatment_in_progress">Treatment In Progress</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="disqualified">Disqualified</SelectItem>
               </SelectContent>
             </Select>
 

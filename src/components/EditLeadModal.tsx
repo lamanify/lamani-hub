@@ -297,12 +297,15 @@ export function EditLeadModal({ lead, open, onOpenChange, onSuccess }: EditLeadM
                         <SelectValue placeholder="Select a status" />
                       </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
+                    <SelectContent className="bg-background z-50">
                       <SelectItem value="new_inquiry">New Inquiry</SelectItem>
+                      <SelectItem value="contact_attempted">Contact Attempted</SelectItem>
                       <SelectItem value="contacted">Contacted</SelectItem>
-                      <SelectItem value="qualified">Qualified</SelectItem>
-                      <SelectItem value="converted">Converted</SelectItem>
-                      <SelectItem value="lost">Lost</SelectItem>
+                      <SelectItem value="appointment_scheduled">Appointment Scheduled</SelectItem>
+                      <SelectItem value="consultation_complete">Consultation Complete</SelectItem>
+                      <SelectItem value="treatment_in_progress">Treatment In Progress</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="disqualified">Disqualified</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
