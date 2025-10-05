@@ -1,4 +1,10 @@
 project_id = "gjnnqeqlxxoiajgklevz"
 
+[functions.signup-with-tenant]
+verify_jwt = false
+
 [functions.create-checkout-session]
 verify_jwt = true
+
+[functions.stripe-webhook]
+verify_jwt = false
