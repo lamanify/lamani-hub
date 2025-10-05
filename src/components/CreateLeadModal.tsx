@@ -56,7 +56,7 @@ interface CreateLeadModalProps {
 
 export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
   const [open, setOpen] = useState(false);
-  const { user, profile } = useAuth();
+  const { user, profile, tenant } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -74,7 +74,9 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
 
   const createLeadMutation = useMutation({
     mutationFn: async (values: LeadFormValues) => {
-      if (!profile?.tenant_id) {
+      const tenantId = tenant?.id || profile?.tenant_id;
+      
+      if (!tenantId) {
         throw new Error("Tenant information not found");
       }
 
@@ -85,7 +87,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
       const { data: existingLeads } = await supabase
         .from("leads")
         .select("id, name, phone, email")
-        .eq("tenant_id", profile.tenant_id)
+        .eq("tenant_id", tenantId)
         .or(`phone.eq.${normalizedPhone},email.eq.${values.email}`);
 
       if (existingLeads && existingLeads.length > 0) {
@@ -99,7 +101,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
       const { data: lead, error: insertError } = await supabase
         .from("leads")
         .insert({
-          tenant_id: profile.tenant_id,
+          tenant_id: tenantId,
           name: values.name,
           phone: normalizedPhone,
           email: values.email,
@@ -118,7 +120,7 @@ export function CreateLeadModal({ trigger }: CreateLeadModalProps) {
 
       // Log audit entry
       await supabase.from("audit_log").insert({
-        tenant_id: profile.tenant_id,
+        tenant_id: tenantId,
         user_id: user?.id,
         action: "lead_create",
         resource_id: lead.id,
