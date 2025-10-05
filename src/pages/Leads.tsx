@@ -61,6 +61,7 @@ import { StatusBadge, type LeadStatus } from "@/components/StatusBadge";
 import { ColumnPicker } from "@/components/ColumnPicker";
 import { CustomFieldCell } from "@/components/CustomFieldCell";
 import { CreateLeadModal } from "@/components/CreateLeadModal";
+import { ImportLeadsModal } from "@/components/ImportLeadsModal";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -347,6 +348,7 @@ export default function Leads() {
             </p>
           </div>
           <div className="flex gap-2">
+            <ImportLeadsModal />
             <Button
               onClick={handleExport}
               disabled={isExporting || !leads || leads.length === 0}

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.export-leads]
 verify_jwt = true
+
+[functions.import-leads]
+verify_jwt = true
