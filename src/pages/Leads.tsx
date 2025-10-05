@@ -60,6 +60,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ColumnPicker } from "@/components/ColumnPicker";
 import { CustomFieldCell } from "@/components/CustomFieldCell";
+import { CreateLeadModal } from "@/components/CreateLeadModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -294,10 +295,7 @@ export default function Leads() {
               Manage your clinic's patient inquiries
             </p>
           </div>
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            New Lead
-          </Button>
+          <CreateLeadModal />
         </div>
 
         {/* Filters */}
@@ -383,10 +381,14 @@ export default function Leads() {
                   <p className="text-muted-foreground text-center mb-6">
                     Get started by adding your first patient inquiry
                   </p>
-                  <Button className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Add Your First Lead
-                  </Button>
+                  <CreateLeadModal
+                    trigger={
+                      <Button className="gap-2">
+                        <Plus className="h-4 w-4" />
+                        Add Your First Lead
+                      </Button>
+                    }
+                  />
                 </>
               )}
             </div>
