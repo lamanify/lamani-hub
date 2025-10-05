@@ -1,12 +1,111 @@
 import { DashboardLayout } from "@/components/Layout/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, TrendingUp, Clock, CheckCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Users, TrendingUp, Clock, CheckCircle, Activity } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const ACTION_LABELS: Record<string, string> = {
+  lead_create: "Lead Created",
+  lead_update: "Lead Updated",
+  lead_delete: "Lead Deleted",
+  lead_view: "Lead Viewed",
+  lead_export: "Export",
+  leads_import: "Import",
+  login: "Login",
+  logout: "Logout",
+  dpo_updated: "DPO Updated",
+  api_key_regenerated: "API Key Regenerated",
+};
+
+const ACTION_COLORS: Record<string, string> = {
+  lead_create: "bg-green-100 text-green-800 border-green-200",
+  lead_update: "bg-blue-100 text-blue-800 border-blue-200",
+  lead_delete: "bg-red-100 text-red-800 border-red-200",
+  lead_view: "bg-gray-100 text-gray-800 border-gray-200",
+  lead_export: "bg-orange-100 text-orange-800 border-orange-200",
+  leads_import: "bg-purple-100 text-purple-800 border-purple-200",
+  login: "bg-blue-100 text-blue-800 border-blue-200",
+  logout: "bg-gray-100 text-gray-800 border-gray-200",
+  dpo_updated: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  api_key_regenerated: "bg-yellow-100 text-yellow-800 border-yellow-200",
+};
 
 export default function Dashboard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Fetch user's profile to get tenant_id
+  const { data: profile } = useQuery({
+    queryKey: ["profile", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("tenant_id")
+        .eq("user_id", user?.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
+  // Fetch leads count
+  const { data: leadsCount } = useQuery({
+    queryKey: ["leads_count", profile?.tenant_id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("leads")
+        .select("*", { count: "exact", head: true })
+        .eq("tenant_id", profile?.tenant_id);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
+  // Fetch recent audit logs
+  const { data: recentActivity, isLoading: activityLoading } = useQuery({
+    queryKey: ["recent_activity", profile?.tenant_id],
+    queryFn: async () => {
+      const { data: auditData, error } = await supabase
+        .from("audit_log")
+        .select("*")
+        .eq("tenant_id", profile?.tenant_id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+
+      // Fetch user profiles for all unique user_ids
+      const userIds = [...new Set(auditData?.map(log => log.user_id).filter(Boolean))];
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name")
+          .in("user_id", userIds);
+
+        // Map profiles to logs
+        const profileMap = new Map(profiles?.map(p => [p.user_id, p.full_name]));
+        return auditData?.map(log => ({
+          ...log,
+          user_name: log.user_id ? profileMap.get(log.user_id) || "Unknown" : "System"
+        }));
+      }
+
+      return auditData?.map(log => ({ ...log, user_name: "System" }));
+    },
+    enabled: !!profile?.tenant_id,
+  });
+
   const stats = [
     {
       title: "Total Leads",
-      value: "0",
+      value: leadsCount?.toString() || "0",
       icon: Users,
       description: "All leads in your system",
     },
@@ -65,6 +164,61 @@ export default function Dashboard() {
             );
           })}
         </div>
+
+        {/* Recent Activity */}
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Recent Activity
+              </CardTitle>
+              <CardDescription>Latest actions in your clinic</CardDescription>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => navigate("/audit-log")}>
+              View All
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {activityLoading ? (
+              <div className="space-y-4">
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : !recentActivity || recentActivity.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                No recent activity
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.map((log) => (
+                  <div
+                    key={log.id}
+                    className="flex items-start justify-between gap-4 p-3 border border-border rounded-lg"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge
+                          variant="outline"
+                          className={ACTION_COLORS[log.action] || ""}
+                        >
+                          {ACTION_LABELS[log.action] || log.action}
+                        </Badge>
+                        <span className="text-sm text-muted-foreground">
+                          by {log.user_name || "System"}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(log.created_at), "dd MMM yyyy, HH:mm")}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card>
