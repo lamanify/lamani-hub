@@ -12,6 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { mapSupabaseAuthError } from "@/utils/authErrors";
 import logo from "@/assets/lamanify-logo.png";
 
 const signupSchema = z.object({
@@ -76,7 +77,7 @@ export default function Signup() {
     console.log('Using fallback signup method...');
     
     const { error } = await supabase.auth.signUp({
-      email: data.email,
+      email: data.email.trim(),
       password: data.password,
       options: {
         data: {
@@ -93,7 +94,7 @@ export default function Signup() {
 
     // Check if user was created and sign them in
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: data.email,
+      email: data.email.trim(),
       password: data.password
     });
 
@@ -109,12 +110,13 @@ export default function Signup() {
 
   const handleSignup = async (data: SignupFormData) => {
     setLoading(true);
-    let attemptedEdgeFunction = false;
+    
+    // Clear any existing form errors
+    form.clearErrors();
 
     try {
       // First try the edge function approach with timeout
       try {
-        attemptedEdgeFunction = true;
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
         
@@ -127,7 +129,7 @@ export default function Signup() {
             },
             body: JSON.stringify({
               clinicName: data.clinicName,
-              email: data.email,
+              email: data.email.trim(),
               password: data.password,
               termsAccepted: data.termsAccepted
             })
@@ -138,19 +140,42 @@ export default function Signup() {
         const result = await response.json();
 
         if (!response.ok) {
-          throw new Error(result.error || 'Signup failed');
+          // Handle errors from edge function
+          const mappedError = mapSupabaseAuthError(new Error(result.error || 'Signup failed'), 'signup');
+          
+          if (mappedError.field) {
+            form.setError(mappedError.field, {
+              type: 'server',
+              message: mappedError.message
+            });
+          } else {
+            toast.error(mappedError.message);
+          }
+          return;
         }
 
         // Now log in the user
         const { error: signInError } = await withTimeout(
           supabase.auth.signInWithPassword({
-            email: data.email,
+            email: data.email.trim(),
             password: data.password
           }),
           10000 // 10 second timeout for sign-in
         );
 
-        if (signInError) throw signInError;
+        if (signInError) {
+          const mappedError = mapSupabaseAuthError(signInError, 'signin');
+          
+          if (mappedError.field) {
+            form.setError(mappedError.field, {
+              type: 'server',
+              message: mappedError.message
+            });
+          } else {
+            toast.error(mappedError.message);
+          }
+          return;
+        }
 
         toast.success("Account created successfully! Welcome to LamaniHub.");
         navigate("/dashboard");
@@ -177,31 +202,26 @@ export default function Signup() {
     } catch (error: any) {
       console.error('Signup error:', error);
       
-      // Handle specific error messages with helpful guidance
-      if (error.message === 'Request timeout') {
-        toast.error("Signup is taking longer than expected. Please check your internet connection and try again.", {
-          duration: 6000
+      // Use the auth error mapping utility
+      const mappedError = mapSupabaseAuthError(error, 'signup');
+      
+      if (mappedError.field) {
+        // Set the error on the specific form field
+        form.setError(mappedError.field, {
+          type: 'server',
+          message: mappedError.message
         });
-      } else if (error.message.includes("already registered") || error.message.includes("already exists") || error.message.includes("User already registered")) {
-        toast.error("This email is already registered. Try signing in instead.");
-      } else if (error.message.includes("password") || error.message.includes("Password")) {
-        toast.error("Password does not meet requirements. Please check the password rules.");
-      } else if (error.message.includes("email") || error.message.includes("Email")) {
-        toast.error("Please enter a valid email address.");
-      } else if (error.message.includes("terms") || error.message.includes("Terms")) {
-        toast.error("You must accept the terms and conditions to continue.");
-      } else if (error.message.includes("clinic") || error.message.includes("Clinic")) {
-        toast.error("Please enter a valid clinic name.");
-      } else if (error.message.includes("network") || error.message.includes("Failed to fetch")) {
-        toast.error("Network error. Please check your internet connection and try again.");
-      } else if (attemptedEdgeFunction && error.message.includes('Edge function')) {
-        toast.error("Service temporarily unavailable. Please try again in a few moments.");
       } else {
-        // Generic error with helpful message
-        toast.error("Unable to create account. Please check your details and try again.", {
-          description: "If the problem persists, please contact support.",
-          duration: 6000
-        });
+        // Show general error as toast for non-field errors
+        if (error.message === 'Request timeout') {
+          toast.error("Signup is taking longer than expected. Please check your internet connection and try again.", {
+            duration: 6000
+          });
+        } else if (error.message.includes("network") || error.message.includes("Failed to fetch")) {
+          toast.error("Network error. Please check your internet connection and try again.");
+        } else {
+          toast.error(mappedError.message);
+        }
       }
     } finally {
       setLoading(false);
