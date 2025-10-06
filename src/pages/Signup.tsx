@@ -61,57 +61,147 @@ export default function Signup() {
     setPasswordStrength(calculatePasswordStrength(value));
   };
 
+  // Create a timeout wrapper for network requests
+  const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
+      })
+    ]);
+  };
+
+  // Fallback direct signup method using Supabase Auth
+  const fallbackSignup = async (data: SignupFormData): Promise<void> => {
+    console.log('Using fallback signup method...');
+    
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          clinic_name: data.clinicName,
+          full_name: data.clinicName,
+          role: 'clinic_admin',
+        }
+      }
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    // Check if user was created and sign them in
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password: data.password
+    });
+
+    if (signInError) {
+      // If sign-in fails, the user might need to confirm their email
+      if (signInError.message.includes('Email not confirmed')) {
+        toast.success("Account created! Please check your email to confirm your account.");
+        return;
+      }
+      throw signInError;
+    }
+  };
+
   const handleSignup = async (data: SignupFormData) => {
     setLoading(true);
+    let attemptedEdgeFunction = false;
 
     try {
-      // Call edge function to create tenant and user
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      const response = await fetch(`${supabaseUrl}/functions/v1/signup-with-tenant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey
-        },
-        body: JSON.stringify({
-          clinicName: data.clinicName,
-          email: data.email,
-          password: data.password,
-          termsAccepted: data.termsAccepted
-        })
-      });
+      // First try the edge function approach with timeout
+      try {
+        attemptedEdgeFunction = true;
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        const response = await withTimeout(
+          fetch(`${supabaseUrl}/functions/v1/signup-with-tenant`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': supabaseKey
+            },
+            body: JSON.stringify({
+              clinicName: data.clinicName,
+              email: data.email,
+              password: data.password,
+              termsAccepted: data.termsAccepted
+            })
+          }),
+          15000 // 15 second timeout for edge function
+        );
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Signup failed');
+        if (!response.ok) {
+          throw new Error(result.error || 'Signup failed');
+        }
+
+        // Now log in the user
+        const { error: signInError } = await withTimeout(
+          supabase.auth.signInWithPassword({
+            email: data.email,
+            password: data.password
+          }),
+          10000 // 10 second timeout for sign-in
+        );
+
+        if (signInError) throw signInError;
+
+        toast.success("Account created successfully! Welcome to LamaniHub.");
+        navigate("/dashboard");
+        
+      } catch (edgeError: any) {
+        console.log('Edge function signup failed:', edgeError);
+        
+        // If edge function fails or times out, use fallback method
+        if (edgeError.message === 'Request timeout' || 
+            edgeError.message.includes('timeout') ||
+            edgeError.message.includes('network') ||
+            edgeError.message.includes('Failed to fetch')) {
+          
+          console.log('Network issue detected, using fallback signup...');
+          await withTimeout(fallbackSignup(data), 20000); // 20 second timeout for fallback
+          
+          toast.success("Account created successfully! Welcome to LamaniHub.");
+          navigate("/dashboard");
+        } else {
+          throw edgeError; // Re-throw non-network errors
+        }
       }
-
-      // Now log in the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password
-      });
-
-      if (signInError) throw signInError;
-
-      toast.success("Account created successfully! Welcome to LamaniHub.");
-      navigate("/dashboard");
 
     } catch (error: any) {
       console.error('Signup error:', error);
       
-      // Handle specific error messages
-      if (error.message.includes("already registered") || error.message.includes("already exists")) {
-        toast.error("This email is already registered");
+      // Handle specific error messages with helpful guidance
+      if (error.message === 'Request timeout') {
+        toast.error("Signup is taking longer than expected. Please check your internet connection and try again.", {
+          duration: 6000
+        });
+      } else if (error.message.includes("already registered") || error.message.includes("already exists") || error.message.includes("User already registered")) {
+        toast.error("This email is already registered. Try signing in instead.");
       } else if (error.message.includes("password") || error.message.includes("Password")) {
-        toast.error("Password does not meet requirements");
+        toast.error("Password does not meet requirements. Please check the password rules.");
+      } else if (error.message.includes("email") || error.message.includes("Email")) {
+        toast.error("Please enter a valid email address.");
       } else if (error.message.includes("terms") || error.message.includes("Terms")) {
-        toast.error("You must accept the terms and conditions");
+        toast.error("You must accept the terms and conditions to continue.");
+      } else if (error.message.includes("clinic") || error.message.includes("Clinic")) {
+        toast.error("Please enter a valid clinic name.");
+      } else if (error.message.includes("network") || error.message.includes("Failed to fetch")) {
+        toast.error("Network error. Please check your internet connection and try again.");
+      } else if (attemptedEdgeFunction && error.message.includes('Edge function')) {
+        toast.error("Service temporarily unavailable. Please try again in a few moments.");
       } else {
-        toast.error("Unable to connect, please try again");
+        // Generic error with helpful message
+        toast.error("Unable to create account. Please check your details and try again.", {
+          description: "If the problem persists, please contact support.",
+          duration: 6000
+        });
       }
     } finally {
       setLoading(false);
@@ -144,7 +234,7 @@ export default function Signup() {
                     <FormItem>
                       <FormLabel>Clinic Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="Your Clinic Name" {...field} />
+                        <Input placeholder="Your Clinic Name" {...field} disabled={loading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -158,7 +248,7 @@ export default function Signup() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="you@clinic.com" {...field} />
+                        <Input type="email" placeholder="you@clinic.com" {...field} disabled={loading} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -176,6 +266,7 @@ export default function Signup() {
                           type="password"
                           placeholder="••••••••"
                           {...field}
+                          disabled={loading}
                           onChange={(e) => {
                             field.onChange(e);
                             handlePasswordChange(e);
@@ -215,6 +306,7 @@ export default function Signup() {
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={loading}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -235,6 +327,12 @@ export default function Signup() {
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {loading ? "Creating account..." : "Create Account"}
                 </Button>
+                
+                {loading && (
+                  <p className="text-xs text-muted-foreground text-center">
+                    This may take a few moments. Please don't refresh the page.
+                  </p>
+                )}
               </form>
             </Form>
 
