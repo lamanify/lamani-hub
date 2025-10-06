@@ -127,15 +127,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setRole(roleData.role);
 
-      // Super admins don't need subscription data - skip tenant fetch to prevent infinite loops
-      if (roleData.role === 'super_admin') {
-        setProfile(null);
-        setTenant(null);
-        setSubscriptionConfig(null);
-        setSubscriptionLoading(false);
-        return;
-      }
-
       // Fetch profile for all users (including super admins)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -146,6 +137,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (profileError) throw profileError;
 
       setProfile(profileData);
+
+      // Super admins don't need subscription data - skip tenant fetch to prevent infinite loops
+      if (roleData.role === 'super_admin') {
+        setTenant(null);
+        setSubscriptionConfig(null);
+        setSubscriptionLoading(false);
+        return;
+      }
 
       // Fetch tenant and subscription config (pass role for security filtering)
       await fetchTenantSubscription(profileData.tenant_id, 'default', roleData.role);
