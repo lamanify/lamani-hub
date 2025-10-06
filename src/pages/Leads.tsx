@@ -473,7 +473,7 @@ export default function Leads() {
           )}
         </div>
 
-        {/* Desktop Table View (≥ md) */}
+        {/* Desktop Table View (≥ md) - HubSpot-style horizontal scrolling */}
         <div className="hidden md:block border rounded-lg bg-white">
           {isLoading ? (
             <div className="p-6 space-y-4">
@@ -518,167 +518,183 @@ export default function Leads() {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="-ml-3 h-8 data-[state=open]:bg-accent"
-                      onClick={() => handleSort("name")}
-                    >
-                      Name
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden lg:table-cell">Source</TableHead>
-                  
-                  {/* Dynamic custom columns */}
-                  {visibleCustomColumns.map((col) => (
-                    <TableHead key={col.key} className="hidden xl:table-cell">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="-ml-3 h-8 data-[state=open]:bg-accent"
-                        onClick={() => handleSort(col.key, true)}
-                      >
-                        {col.label}
-                        <ArrowUpDown className="ml-2 h-3 w-3" />
-                      </Button>
-                    </TableHead>
-                  ))}
-                  
-                  <TableHead>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="-ml-3 h-8 data-[state=open]:bg-accent"
-                      onClick={() => handleSort("created_at")}
-                    >
-                      Created
-                      <ArrowUpDown className="ml-2 h-3 w-3" />
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leads?.map((lead) => {
-                  const SourceIcon = sourceIcons[lead.source || "manual"] || UserPlus;
-                  return (
-                    <TableRow
-                      key={lead.id}
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => navigate(`/leads/${lead.id}`)}
-                    >
-                      <TableCell className="font-semibold">{lead.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{formatPhone(lead.phone)}</span>
-                          <div className="flex gap-1">
-                            <WhatsAppButton phone={lead.phone} variant="icon" />
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-7 w-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    copyToClipboard(lead.phone);
-                                  }}
-                                >
-                                  <Copy className="h-3.5 w-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Copy</TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden md:table-cell">
-                        {lead.email ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="text-sm truncate max-w-[200px] block">
-                                {lead.email}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>{lead.email}</TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <StatusBadge status={lead.status} />
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <SourceIcon className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm capitalize">{lead.source || "Manual"}</span>
-                        </div>
-                      </TableCell>
+            // 🎯 HubSpot-style horizontal scrolling container
+            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <div className="min-w-max">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[180px] sticky left-0 bg-background z-10 border-r">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="-ml-3 h-8 data-[state=open]:bg-accent font-semibold"
+                          onClick={() => handleSort("name")}
+                        >
+                          Name
+                          <ArrowUpDown className="ml-2 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="min-w-[160px]">Phone</TableHead>
+                      <TableHead className="min-w-[220px]">Email</TableHead>
+                      <TableHead className="min-w-[140px]">Status</TableHead>
+                      <TableHead className="min-w-[120px]">Source</TableHead>
                       
-                      {/* Dynamic custom field columns */}
+                      {/* Dynamic custom columns - each with proper min width */}
                       {visibleCustomColumns.map((col) => (
-                        <TableCell key={col.key} className="hidden xl:table-cell">
-                          <CustomFieldCell
-                            value={lead.custom?.[col.key]}
-                            dataType={col.dataType}
-                          />
-                        </TableCell>
+                        <TableHead key={col.key} className="min-w-[150px]">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="-ml-3 h-8 data-[state=open]:bg-accent"
+                            onClick={() => handleSort(col.key, true)}
+                          >
+                            {col.label}
+                            <ArrowUpDown className="ml-2 h-3 w-3" />
+                          </Button>
+                        </TableHead>
                       ))}
                       
-                      <TableCell>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="text-sm text-muted-foreground">
-                              {formatDistanceToNow(new Date(lead.created_at), {
-                                addSuffix: true,
-                              })}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {new Date(lead.created_at).toLocaleString()}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
-                              <Eye className="mr-2 h-4 w-4" />
-                              View
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Pencil className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => handleDelete(lead)}
-                            >
-                              <Trash className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      <TableHead className="min-w-[140px]">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="-ml-3 h-8 data-[state=open]:bg-accent"
+                          onClick={() => handleSort("created_at")}
+                        >
+                          Created
+                          <ArrowUpDown className="ml-2 h-3 w-3" />
+                        </Button>
+                      </TableHead>
+                      <TableHead className="text-right min-w-[100px] sticky right-0 bg-background z-10 border-l">
+                        Actions
+                      </TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {leads?.map((lead) => {
+                      const SourceIcon = sourceIcons[lead.source || "manual"] || UserPlus;
+                      return (
+                        <TableRow
+                          key={lead.id}
+                          className="cursor-pointer hover:bg-muted/50"
+                          onClick={() => navigate(`/leads/${lead.id}`)}
+                        >
+                          {/* Sticky Name column */}
+                          <TableCell className="font-semibold sticky left-0 bg-background z-10 border-r">
+                            <div className="truncate pr-2">{lead.name}</div>
+                          </TableCell>
+                          
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm whitespace-nowrap">{formatPhone(lead.phone)}</span>
+                              <div className="flex gap-1">
+                                <WhatsAppButton phone={lead.phone} variant="icon" />
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        copyToClipboard(lead.phone);
+                                      }}
+                                    >
+                                      <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Copy</TooltipContent>
+                                </Tooltip>
+                              </div>
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell>
+                            {lead.email ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="text-sm truncate max-w-[200px]">
+                                    {lead.email}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>{lead.email}</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">—</span>
+                            )}
+                          </TableCell>
+                          
+                          <TableCell onClick={(e) => e.stopPropagation()}>
+                            <StatusBadge status={lead.status} />
+                          </TableCell>
+                          
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <SourceIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="text-sm capitalize whitespace-nowrap">{lead.source || "Manual"}</span>
+                            </div>
+                          </TableCell>
+                          
+                          {/* Dynamic custom field columns */}
+                          {visibleCustomColumns.map((col) => (
+                            <TableCell key={col.key}>
+                              <CustomFieldCell
+                                value={lead.custom?.[col.key]}
+                                dataType={col.dataType}
+                              />
+                            </TableCell>
+                          ))}
+                          
+                          <TableCell>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="text-sm text-muted-foreground whitespace-nowrap">
+                                  {formatDistanceToNow(new Date(lead.created_at), {
+                                    addSuffix: true,
+                                  })}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {new Date(lead.created_at).toLocaleString()}
+                              </TooltipContent>
+                            </Tooltip>
+                          </TableCell>
+                          
+                          {/* Sticky Actions column */}
+                          <TableCell className="text-right sticky right-0 bg-background z-10 border-l" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => navigate(`/leads/${lead.id}`)}>
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View
+                                </DropdownMenuItem>
+                                <DropdownMenuItem>
+                                  <Pencil className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => handleDelete(lead)}
+                                >
+                                  <Trash className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </div>
       </div>
