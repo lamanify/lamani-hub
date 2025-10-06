@@ -127,6 +127,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setRole(roleData.role);
 
+      // Super admins don't need subscription data - skip tenant fetch to prevent infinite loops
+      if (roleData.role === 'super_admin') {
+        setProfile(null);
+        setTenant(null);
+        setSubscriptionConfig(null);
+        setSubscriptionLoading(false);
+        return;
+      }
+
       // Fetch profile for all users (including super admins)
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -147,6 +156,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshSubscription = async () => {
+    // Super admins don't have subscriptions to refresh
+    if (role === 'super_admin') {
+      return;
+    }
+    
     if (profile?.tenant_id && tenant?.plan_type) {
       await fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
     }
@@ -175,6 +189,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Refresh subscription every 5 minutes
   useEffect(() => {
+    // Super admins don't need subscription refresh timers
+    if (role === 'super_admin') {
+      return;
+    }
+
     const interval = setInterval(() => {
       const fiveMinutes = 5 * 60 * 1000;
       if (Date.now() - lastSubscriptionFetch > fiveMinutes && profile?.tenant_id && tenant?.plan_type) {
@@ -187,6 +206,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Refresh subscription on route change
   useEffect(() => {
+    // Super admins don't need subscription refresh on route changes
+    if (role === 'super_admin') {
+      return;
+    }
+
     if (profile?.tenant_id && tenant?.plan_type) {
       const threeMinutes = 3 * 60 * 1000;
       if (Date.now() - lastSubscriptionFetch > threeMinutes) {
