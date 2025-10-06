@@ -24,6 +24,8 @@ import {
 import { cn } from "@/lib/utils";
 import logo from "@/assets/lamanify-logo.png";
 import { useAuth } from "@/contexts/AuthContext";
+import TrialBanner from "../TrialBanner";
+import PastDueBanner from "../PastDueBanner";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -276,6 +278,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </DropdownMenu>
           </div>
         </header>
+
+        {/* Status Banners */}
+        <div className="bg-white">
+          <TrialBanner />
+          <PastDueBanner />
+        </div>
 
         {/* Page Content */}
         <main className="flex-1 bg-[#FAFAFA] overflow-auto">
