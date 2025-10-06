@@ -30,6 +30,9 @@ export default function Landing() {
               <Link to="/signup">Get Started</Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="min-w-[200px]">
+              <Link to="/product">Features</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="min-w-[200px]">
               <Link to="/login">Sign In</Link>
             </Button>
           </div>

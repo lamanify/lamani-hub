@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, Star, Users, Shield, Calendar, MessageSquare } from 'lucide-react';
+import logo from "@/assets/lamanify-logo.png";
 
 const ProductPage = () => {
   const features = [
@@ -49,7 +50,7 @@ const ProductPage = () => {
 
   const handleStartTrial = () => {
     // This would redirect to your checkout/signup flow
-    window.location.href = '/auth?trial=true';
+    window.location.href = '/signup';
   };
 
   return (
@@ -59,7 +60,7 @@ const ProductPage = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link to="/" className="flex items-center">
-              <img src="/logo.png" alt="LamaniHub" className="h-8 w-auto" />
+              <img src={logo} alt="LamaniHub" className="h-8 w-auto" />
               <span className="ml-2 text-xl font-bold text-gray-900">LamaniHub</span>
             </Link>
             
@@ -76,7 +77,7 @@ const ProductPage = () => {
             </nav>
 
             <div className="flex items-center space-x-4">
-              <Link to="/auth" className="text-gray-700 hover:text-blue-600 text-sm font-medium">
+              <Link to="/login" className="text-gray-700 hover:text-blue-600 text-sm font-medium">
                 Sign In
               </Link>
               <button
@@ -127,7 +128,7 @@ const ProductPage = () => {
             <div className="lg:flex justify-center hidden">
               <div className="bg-white/10 backdrop-blur-sm p-8 rounded-lg">
                 <img 
-                  src="/api/placeholder/500/400" 
+                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=500&h=400&fit=crop" 
                   alt="LamaniHub Dashboard Preview" 
                   className="rounded-lg shadow-2xl"
                 />
@@ -348,7 +349,7 @@ const ProductPage = () => {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <img src="/logo.png" alt="LamaniHub" className="h-8 w-auto" />
+                <img src={logo} alt="LamaniHub" className="h-8 w-auto" />
                 <span className="ml-2 text-xl font-bold">LamaniHub</span>
               </div>
               <p className="text-gray-400">
@@ -361,7 +362,7 @@ const ProductPage = () => {
               <ul className="space-y-2 text-gray-400">
                 <li><a href="#features" className="hover:text-white">Features</a></li>
                 <li><a href="#pricing" className="hover:text-white">Pricing</a></li>
-                <li><Link to="/auth" className="hover:text-white">Sign Up</Link></li>
+                <li><Link to="/signup" className="hover:text-white">Sign Up</Link></li>
               </ul>
             </div>
             
