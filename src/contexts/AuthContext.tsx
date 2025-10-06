@@ -178,22 +178,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const interval = setInterval(() => {
       const fiveMinutes = 5 * 60 * 1000;
       if (Date.now() - lastSubscriptionFetch > fiveMinutes && profile?.tenant_id && tenant?.plan_type) {
-        fetchTenantSubscription(profile.tenant_id, tenant.plan_type);
+        fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
       }
     }, 60000); // Check every minute
 
     return () => clearInterval(interval);
-  }, [lastSubscriptionFetch, profile?.tenant_id, tenant?.plan_type]);
+  }, [lastSubscriptionFetch, profile?.tenant_id, tenant?.plan_type, role]);
 
   // Refresh subscription on route change
   useEffect(() => {
     if (profile?.tenant_id && tenant?.plan_type) {
       const threeMinutes = 3 * 60 * 1000;
       if (Date.now() - lastSubscriptionFetch > threeMinutes) {
-        fetchTenantSubscription(profile.tenant_id, tenant.plan_type);
+        fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
       }
     }
-  }, [location.pathname]);
+  }, [location.pathname, role]);
 
   useEffect(() => {
     // Check for existing session
