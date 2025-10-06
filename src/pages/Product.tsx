@@ -3,59 +3,45 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Star, Users, Shield, Calendar, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import logo from "@/assets/lamanify-logo.png";
-
 const ProductPage = () => {
-  const features = [
-    {
-      icon: <Users className="h-8 w-8 text-primary" />,
-      title: "Patient Management",
-      description: "Complete patient records, medical history, and PDPA-compliant data storage for Malaysian healthcare providers."
-    },
-    {
-      icon: <MessageSquare className="h-8 w-8 text-primary" />,
-      title: "WhatsApp Integration", 
-      description: "Instant patient communication with click-to-chat functionality and automated appointment reminders."
-    },
-    {
-      icon: <Calendar className="h-8 w-8 text-primary" />,
-      title: "Smart Scheduling",
-      description: "Advanced appointment booking system with automated reminders and calendar synchronization."
-    },
-    {
-      icon: <Shield className="h-8 w-8 text-primary" />,
-      title: "PDPA Compliant",
-      description: "Secure, compliant patient data handling specifically designed for Malaysian healthcare regulations."
-    }
-  ];
-
-  const testimonials = [
-    {
-      quote: "LamaniHub transformed our patient management. We save 3 hours daily on administrative tasks.",
-      author: "Dr. Sarah Ahmad",
-      clinic: "Ahmad Family Clinic, Kuala Lumpur",
-      rating: 5
-    },
-    {
-      quote: "The WhatsApp integration is game-changing. Our patients love the instant communication.",
-      author: "Dr. Raj Patel", 
-      clinic: "Dental Care Centre, Penang",
-      rating: 5
-    },
-    {
-      quote: "PDPA compliance made easy. Professional system that builds patient trust.",
-      author: "Dr. Lim Wei Ming",
-      clinic: "Specialist Clinic, Johor Bahru",
-      rating: 5
-    }
-  ];
-
+  const features = [{
+    icon: <Users className="h-8 w-8 text-primary" />,
+    title: "Patient Management",
+    description: "Complete patient records, medical history, and PDPA-compliant data storage for Malaysian healthcare providers."
+  }, {
+    icon: <MessageSquare className="h-8 w-8 text-primary" />,
+    title: "WhatsApp Integration",
+    description: "Instant patient communication with click-to-chat functionality and automated appointment reminders."
+  }, {
+    icon: <Calendar className="h-8 w-8 text-primary" />,
+    title: "Smart Scheduling",
+    description: "Advanced appointment booking system with automated reminders and calendar synchronization."
+  }, {
+    icon: <Shield className="h-8 w-8 text-primary" />,
+    title: "PDPA Compliant",
+    description: "Secure, compliant patient data handling specifically designed for Malaysian healthcare regulations."
+  }];
+  const testimonials = [{
+    quote: "LamaniHub transformed our patient management. We save 3 hours daily on administrative tasks.",
+    author: "Dr. Sarah Ahmad",
+    clinic: "Ahmad Family Clinic, Kuala Lumpur",
+    rating: 5
+  }, {
+    quote: "The WhatsApp integration is game-changing. Our patients love the instant communication.",
+    author: "Dr. Raj Patel",
+    clinic: "Dental Care Centre, Penang",
+    rating: 5
+  }, {
+    quote: "PDPA compliance made easy. Professional system that builds patient trust.",
+    author: "Dr. Lim Wei Ming",
+    clinic: "Specialist Clinic, Johor Bahru",
+    rating: 5
+  }];
   const handleStartTrial = () => {
     // This would redirect to your checkout/signup flow
     window.location.href = '/signup';
   };
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-background shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -115,23 +101,14 @@ const ProductPage = () => {
                 </div>
               </div>
               
-              <Button
-                onClick={handleStartTrial}
-                size="lg"
-                variant="secondary"
-                className="text-lg px-8 py-6 h-auto"
-              >
+              <Button onClick={handleStartTrial} size="lg" variant="secondary" className="text-lg px-8 py-6 h-auto">
                 Start Free Trial Now →
               </Button>
             </div>
             
             <div className="lg:flex justify-center hidden">
               <div className="bg-white/10 backdrop-blur-sm p-8 rounded-lg">
-                <img 
-                  src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=500&h=400&fit=crop" 
-                  alt="LamaniHub Dashboard Preview" 
-                  className="rounded-lg shadow-2xl"
-                />
+                <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=500&h=400&fit=crop" alt="LamaniHub Dashboard Preview" className="rounded-lg shadow-2xl" />
               </div>
             </div>
           </div>
@@ -151,8 +128,7 @@ const ProductPage = () => {
           </div>
           
           <div className="grid lg:grid-cols-2 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="bg-card p-8 rounded-lg shadow-md hover:shadow-lg transition-all hover:scale-[1.02]">
+            {features.map((feature, index) => <div key={index} className="bg-card p-8 rounded-lg shadow-md hover:shadow-lg transition-all hover:scale-[1.02]">
                 <div className="flex items-start">
                   <div className="flex-shrink-0 mr-4">
                     {feature.icon}
@@ -166,8 +142,7 @@ const ProductPage = () => {
                     </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              </div>)}
           </div>
 
           <div className="mt-16 bg-card p-8 rounded-lg shadow-md">
@@ -175,83 +150,17 @@ const ProductPage = () => {
               Complete Feature Set
             </h3>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[
-                'Unlimited patient records',
-                'WhatsApp click-to-chat',
-                'Appointment scheduling',
-                'Automated reminders',
-                'PDPA compliance',
-                'Multi-user access',
-                'Custom fields & forms',
-                'Professional reports',
-                'Data export/backup',
-                'Priority support',
-                'Mobile responsive',
-                'Secure cloud hosting'
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center">
+              {['Unlimited patient records', 'WhatsApp click-to-chat', 'Appointment scheduling', 'Automated reminders', 'PDPA compliance', 'Multi-user access', 'Custom fields & forms', 'Professional reports', 'Data export/backup', 'Priority support', 'Mobile responsive', 'Secure cloud hosting'].map((feature, index) => <div key={index} className="flex items-center">
                   <CheckCircle className="h-5 w-5 text-primary mr-2 flex-shrink-0" />
                   <span className="text-foreground">{feature}</span>
-                </div>
-              ))}
+                </div>)}
             </div>
           </div>
         </div>
       </section>
 
       {/* Testimonials Section */}
-      <section id="testimonials" className="py-20 bg-background">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-foreground mb-4">
-              Trusted by Malaysian Healthcare Providers
-            </h2>
-            <p className="text-xl text-muted-foreground">
-              See what clinic owners are saying about LamaniHub
-            </p>
-          </div>
-          
-          <div className="grid lg:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-card p-6 rounded-lg shadow-md border hover:shadow-lg transition-shadow">
-                <div className="flex mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <Star key={i} className="h-5 w-5 text-yellow-500 fill-current" />
-                  ))}
-                </div>
-                <blockquote className="text-muted-foreground mb-4">
-                  "{testimonial.quote}"
-                </blockquote>
-                <div>
-                  <div className="font-semibold text-foreground">{testimonial.author}</div>
-                  <div className="text-sm text-muted-foreground">{testimonial.clinic}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-16 text-center">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              <div>
-                <div className="text-3xl font-bold text-primary">500+</div>
-                <div className="text-muted-foreground">Malaysian Clinics</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-primary">50,000+</div>
-                <div className="text-muted-foreground">Patients Managed</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-primary">99.9%</div>
-                <div className="text-muted-foreground">Uptime</div>
-              </div>
-              <div>
-                <div className="text-3xl font-bold text-primary">24/7</div>
-                <div className="text-muted-foreground">Support</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* Pricing Section */}
       <section id="pricing" className="py-20 bg-secondary">
@@ -307,11 +216,7 @@ const ProductPage = () => {
                 </li>
               </ul>
               
-              <Button
-                onClick={handleStartTrial}
-                size="lg"
-                className="w-full text-lg py-6 h-auto mb-4"
-              >
+              <Button onClick={handleStartTrial} size="lg" className="w-full text-lg py-6 h-auto mb-4">
                 Start Free Trial
               </Button>
               
@@ -332,12 +237,7 @@ const ProductPage = () => {
           <p className="text-xl mb-8 text-white/90">
             Join hundreds of Malaysian clinics already using LamaniHub to provide better patient care.
           </p>
-          <Button
-            onClick={handleStartTrial}
-            size="lg"
-            variant="secondary"
-            className="text-xl px-8 py-6 h-auto"
-          >
+          <Button onClick={handleStartTrial} size="lg" variant="secondary" className="text-xl px-8 py-6 h-auto">
             Start Your Free 14-Day Trial
           </Button>
           <p className="mt-4 text-sm text-white/75">
@@ -347,54 +247,7 @@ const ProductPage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-foreground text-background py-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center mb-4">
-                <img src={logo} alt="LamaniHub" className="h-8 w-auto brightness-0 invert" />
-                <span className="ml-2 text-xl font-bold">LamaniHub</span>
-              </div>
-              <p className="text-background/70">
-                The complete CRM solution built specifically for Malaysian healthcare providers.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Product</h3>
-              <ul className="space-y-2 text-background/70">
-                <li><a href="#features" className="hover:text-background transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-background transition-colors">Pricing</a></li>
-                <li><Link to="/signup" className="hover:text-background transition-colors">Sign Up</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-background/70">
-                <li><a href="mailto:support@lamanify.com" className="hover:text-background transition-colors">Contact Support</a></li>
-                <li><a href="#" className="hover:text-background transition-colors">Help Center</a></li>
-                <li><Link to="/privacy" className="hover:text-background transition-colors">PDPA Policy</Link></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-semibold mb-4">Company</h3>
-              <ul className="space-y-2 text-background/70">
-                <li><Link to="/" className="hover:text-background transition-colors">About Lamanify</Link></li>
-                <li><a href="#" className="hover:text-background transition-colors">Terms of Service</a></li>
-                <li><Link to="/privacy" className="hover:text-background transition-colors">Privacy Policy</Link></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-background/20 mt-12 pt-8 text-center text-background/70">
-            <p>&copy; 2024 Lamanify. All rights reserved. Built for Malaysian healthcare providers.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
+      
+    </div>;
 };
-
 export default ProductPage;
