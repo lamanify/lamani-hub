@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -30,6 +30,7 @@ export default function Login() {
   const { user, role, loading: authLoading, login } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
+  const hasRedirectedRef = useRef(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -40,30 +41,48 @@ export default function Login() {
     }
   });
 
-  // Clear cache and force fresh session on mount
+  // Complete auth state reset on mount
   useEffect(() => {
-    const clearAuthCache = async () => {
-      // Clear any stale session data from localStorage
-      const storageKeys = Object.keys(localStorage);
-      storageKeys.forEach(key => {
-        if (key.includes('supabase.auth.token')) {
-          localStorage.removeItem(key);
-        }
+    const initAuth = async () => {
+      // Full sign out to reset Supabase client state
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      // Clear all Supabase-related keys from both localStorage and sessionStorage
+      ['localStorage', 'sessionStorage'].forEach(storageType => {
+        const storage = storageType === 'localStorage' ? localStorage : sessionStorage;
+        const keys = Object.keys(storage);
+        keys.forEach(key => {
+          if (key.includes('supabase')) {
+            storage.removeItem(key);
+          }
+        });
       });
       
-      // Force Supabase to re-check session
-      await supabase.auth.refreshSession();
+      // Get fresh session state (recommended over refreshSession)
+      await supabase.auth.getSession();
     };
 
-    clearAuthCache();
+    initAuth();
+    
+    // Reset redirect flag on unmount
+    return () => {
+      hasRedirectedRef.current = false;
+    };
   }, []);
 
+  // Navigation guard with stability check
   useEffect(() => {
-    // Wait for auth to finish loading, then redirect authenticated users
-    if (!authLoading && user) {
-      navigate("/dashboard");
+    // Only navigate once, when auth is stable and user is confirmed
+    if (!authLoading && user && !hasRedirectedRef.current) {
+      // Add small delay to ensure auth state is fully settled
+      const timer = setTimeout(() => {
+        hasRedirectedRef.current = true;
+        navigate("/dashboard");
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
-  }, [user, role, authLoading, navigate]);
+  }, [user, authLoading, navigate]);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsSubmitting(true);
