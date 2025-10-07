@@ -31,6 +31,9 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const hasRedirectedRef = useRef(false);
+  const isNavigatingRef = useRef(false);
+  const navigationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const previousUserIdRef = useRef<string | null>(null);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -70,19 +73,71 @@ export default function Login() {
     };
   }, []);
 
-  // Navigation guard with stability check
+  // Navigation guard with enhanced stability check and logging
   useEffect(() => {
-    // Only navigate once, when auth is stable and user is confirmed
-    if (!authLoading && user && !hasRedirectedRef.current) {
-      // Add small delay to ensure auth state is fully settled
-      const timer = setTimeout(() => {
-        hasRedirectedRef.current = true;
-        navigate("/dashboard");
-      }, 100);
-      
-      return () => clearTimeout(timer);
+    console.log("[Login Navigation Guard]", {
+      authLoading,
+      userId: user?.id,
+      role,
+      hasRedirected: hasRedirectedRef.current,
+      isNavigating: isNavigatingRef.current,
+      previousUserId: previousUserIdRef.current,
+      timestamp: new Date().toISOString()
+    });
+
+    // Clear any existing navigation timer
+    if (navigationTimerRef.current) {
+      clearTimeout(navigationTimerRef.current);
+      navigationTimerRef.current = null;
     }
-  }, [user, authLoading, navigate]);
+
+    // Early return conditions
+    if (authLoading || !user || hasRedirectedRef.current || isNavigatingRef.current) {
+      return;
+    }
+
+    // Check for user ID stability (same user for consecutive renders)
+    const currentUserId = user.id;
+    if (previousUserIdRef.current !== currentUserId) {
+      console.log("[Login] User ID changed, waiting for stability", {
+        previous: previousUserIdRef.current,
+        current: currentUserId
+      });
+      previousUserIdRef.current = currentUserId;
+      return;
+    }
+
+    // User is stable, proceed with navigation after delay
+    console.log("[Login] Auth stable, scheduling navigation");
+    isNavigatingRef.current = true;
+    
+    navigationTimerRef.current = setTimeout(() => {
+      console.log("[Login] Executing navigation to /dashboard");
+      hasRedirectedRef.current = true;
+      navigate("/dashboard");
+    }, 300);
+
+    // Cleanup
+    return () => {
+      if (navigationTimerRef.current) {
+        console.log("[Login] Cleanup: clearing navigation timer");
+        clearTimeout(navigationTimerRef.current);
+        navigationTimerRef.current = null;
+      }
+    };
+  }, [user, authLoading, navigate, role]);
+
+  // Reset refs on unmount
+  useEffect(() => {
+    return () => {
+      hasRedirectedRef.current = false;
+      isNavigatingRef.current = false;
+      previousUserIdRef.current = null;
+      if (navigationTimerRef.current) {
+        clearTimeout(navigationTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleLogin = async (data: LoginFormData) => {
     setIsSubmitting(true);
