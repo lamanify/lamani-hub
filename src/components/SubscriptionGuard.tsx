@@ -23,6 +23,7 @@ export default function SubscriptionGuard({
   const { user, tenant, role, loading, subscriptionLoading, isInGracePeriod } = useAuth();
   const location = useLocation();
   const [toastMessage, setToastMessage] = useState<ToastMessage>(null);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const hasShownToast = useRef(false);
 
   // Handle toast notifications after render
@@ -41,15 +42,49 @@ export default function SubscriptionGuard({
   useEffect(() => {
     hasShownToast.current = false;
     setToastMessage(null);
+    setLoadingTimeout(false);
   }, [location.pathname]);
 
+  // Add timeout for loading states to prevent infinite spinner
+  useEffect(() => {
+    if (loading || subscriptionLoading) {
+      console.log('[SubscriptionGuard] Loading...', { loading, subscriptionLoading });
+      
+      const timer = setTimeout(() => {
+        console.error('[SubscriptionGuard] Loading timeout - taking too long');
+        setLoadingTimeout(true);
+        toast({
+          title: "Loading Error",
+          description: "Authentication is taking too long. Please try refreshing the page.",
+          variant: "destructive"
+        });
+      }, 10000); // 10 second timeout
+
+      return () => clearTimeout(timer);
+    } else {
+      setLoadingTimeout(false);
+    }
+  }, [loading, subscriptionLoading]);
+
   // Show loading spinner while checking auth and subscription
-  if (loading || subscriptionLoading) {
+  if ((loading || subscriptionLoading) && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
+  }
+
+  // If loading timed out, redirect to billing with error
+  if (loadingTimeout) {
+    if (!toastMessage) {
+      setToastMessage({
+        title: "Authentication Timeout",
+        description: "Please try logging in again or contact support.",
+        variant: "destructive"
+      });
+    }
+    return <Navigate to="/billing" replace />;
   }
 
   // Check authentication first

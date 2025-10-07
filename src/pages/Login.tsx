@@ -27,7 +27,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const navigate = useNavigate();
-  const { user, role, loading: authLoading, login } = useAuth();
+  const auth = useAuth();
+  const { user, role, loading: authLoading, subscriptionLoading, login } = auth;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
   const hasRedirectedRef = useRef(false);
@@ -77,6 +78,7 @@ export default function Login() {
   useEffect(() => {
     console.log("[Login Navigation Guard]", {
       authLoading,
+      subscriptionLoading,
       userId: user?.id,
       role,
       hasRedirected: hasRedirectedRef.current,
@@ -91,8 +93,8 @@ export default function Login() {
       navigationTimerRef.current = null;
     }
 
-    // Early return conditions - wait for role to load as well
-    if (authLoading || !user || !role || hasRedirectedRef.current || isNavigatingRef.current) {
+    // Early return conditions - wait for role AND subscription to load
+    if (authLoading || subscriptionLoading || !user || !role || hasRedirectedRef.current || isNavigatingRef.current) {
       return;
     }
 
@@ -125,7 +127,7 @@ export default function Login() {
         navigationTimerRef.current = null;
       }
     };
-  }, [user, authLoading, navigate, role]);
+  }, [user, authLoading, subscriptionLoading, role, navigate]);
 
   // Reset refs on unmount
   useEffect(() => {

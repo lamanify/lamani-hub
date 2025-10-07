@@ -116,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfileAndRole = async (userId: string) => {
     try {
+      setSubscriptionLoading(true); // Ensure this is set at the start
+      
       // Fetch role first
       const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
@@ -148,6 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Fetch tenant and subscription config (pass role for security filtering)
       await fetchTenantSubscription(profileData.tenant_id, 'default', roleData.role);
+      
+      console.log('[AuthContext] fetchProfileAndRole completed, subscriptionLoading should now be false');
     } catch (error) {
       console.error('Error fetching profile/role:', error);
       setSubscriptionLoading(false);
@@ -233,12 +237,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('[AuthContext] Auth state changed:', event);
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
           await fetchProfileAndRole(session.user.id);
-          setLoading(false); // Set loading to false after profile/role fetch
+          // Wait a tick to ensure subscriptionLoading state has propagated
+          setTimeout(() => {
+            console.log('[AuthContext] Setting loading to false');
+            setLoading(false);
+          }, 0);
         } else {
           setProfile(null);
           setTenant(null);
