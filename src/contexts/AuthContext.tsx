@@ -183,12 +183,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('[AuthContext] Role fetched:', roleData?.role);
       setRole(roleData.role);
 
-      // Fetch profile for all users (including super admins)
-      const { data: profileData, error: profileError } = await supabase
+      // Fetch profile for all users (including super admins) - with timeout protection
+      console.log('[AuthContext] Fetching profile...');
+      const profilePromise = supabase
         .from('profiles')
         .select('user_id, tenant_id, full_name')
         .eq('user_id', userId)
         .single();
+      
+      const profileTimeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => {
+          console.error('[AuthContext] Profile query TIMEOUT after 10 seconds');
+          reject(new Error('Profile query timeout'));
+        }, 10000)
+      );
+
+      const { data: profileData, error: profileError } = await Promise.race([
+        profilePromise,
+        profileTimeoutPromise
+      ]) as any;
 
       if (profileError) {
         console.error('[AuthContext] Error fetching profile:', profileError);
