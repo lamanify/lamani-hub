@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -39,6 +39,30 @@ export default function Signup() {
       termsAccepted: false
     }
   });
+
+  // Complete auth state reset on mount
+  useEffect(() => {
+    const initAuth = async () => {
+      // Full sign out to reset Supabase client state
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      // Clear all Supabase-related keys from both localStorage and sessionStorage
+      ['localStorage', 'sessionStorage'].forEach(storageType => {
+        const storage = storageType === 'localStorage' ? localStorage : sessionStorage;
+        const keys = Object.keys(storage);
+        keys.forEach(key => {
+          if (key.includes('supabase')) {
+            storage.removeItem(key);
+          }
+        });
+      });
+      
+      // Get fresh session state
+      await supabase.auth.getSession();
+    };
+
+    initAuth();
+  }, []);
 
   const calculatePasswordStrength = (password: string): "weak" | "medium" | "strong" => {
     if (password.length < 8) return "weak";

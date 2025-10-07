@@ -1,11 +1,17 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Heart, Shield, Users } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import PublicTopBar from "@/components/PublicTopBar";
 import logo from "@/assets/lamanify-logo.png";
 
 export default function Landing() {
+  const { user } = useAuth();
+
   return (
     <div className="min-h-screen bg-background">
+      <PublicTopBar />
+      
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-20 lg:py-32">
         <div className="max-w-4xl mx-auto text-center space-y-8">
@@ -32,9 +38,15 @@ export default function Landing() {
             <Button asChild variant="outline" size="lg" className="min-w-[200px]">
               <Link to="/product">Features</Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="min-w-[200px]">
-              <Link to="/login">Sign In</Link>
-            </Button>
+            {user ? (
+              <Button asChild size="lg" className="min-w-[200px]">
+                <Link to="/dashboard">Go to Dashboard</Link>
+              </Button>
+            ) : (
+              <Button asChild variant="outline" size="lg" className="min-w-[200px]">
+                <Link to="/login">Sign In</Link>
+              </Button>
+            )}
           </div>
         </div>
       </section>

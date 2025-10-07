@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle, Star, Users, Shield, Calendar, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import PublicTopBar from '@/components/PublicTopBar';
 import logo from "@/assets/lamanify-logo.png";
 const ProductPage = () => {
   const features = [{
@@ -42,38 +43,7 @@ const ProductPage = () => {
     window.location.href = '/signup';
   };
   return <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-background shadow-sm border-b sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
-              <img src={logo} alt="LamaniHub" className="h-8 w-auto" />
-              <span className="ml-2 text-xl font-bold text-foreground">LamaniHub</span>
-            </Link>
-            
-            <nav className="hidden md:flex space-x-8">
-              <a href="#features" className="text-muted-foreground hover:text-primary px-3 py-2 text-sm font-medium transition-colors">
-                Features
-              </a>
-              <a href="#pricing" className="text-muted-foreground hover:text-primary px-3 py-2 text-sm font-medium transition-colors">
-                Pricing
-              </a>
-              <a href="#testimonials" className="text-muted-foreground hover:text-primary px-3 py-2 text-sm font-medium transition-colors">
-                Reviews
-              </a>
-            </nav>
-
-            <div className="flex items-center space-x-4">
-              <Button asChild variant="ghost">
-                <Link to="/login">Sign In</Link>
-              </Button>
-              <Button onClick={handleStartTrial}>
-                Start Free Trial
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PublicTopBar />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary via-primary to-primary-dark text-primary-foreground py-[120px]">

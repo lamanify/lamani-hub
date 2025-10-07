@@ -1,17 +1,12 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import PublicTopBar from "@/components/PublicTopBar";
 
 export default function Privacy() {
   return (
     <div className="min-h-screen bg-background">
+      <PublicTopBar />
+      
       <div className="container mx-auto px-6 py-12 max-w-4xl">
-        <Button variant="ghost" asChild className="mb-8">
-          <Link to="/">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Home
-          </Link>
-        </Button>
 
         <div className="space-y-6">
           <h1 className="text-4xl font-semibold text-foreground">Privacy Policy</h1>
