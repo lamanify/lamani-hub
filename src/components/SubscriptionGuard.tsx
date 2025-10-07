@@ -58,7 +58,7 @@ export default function SubscriptionGuard({
           description: "Authentication is taking too long. Please try refreshing the page.",
           variant: "destructive"
         });
-      }, 10000); // 10 second timeout
+      }, 5000); // 5 second timeout
 
       return () => clearTimeout(timer);
     } else {
@@ -67,7 +67,8 @@ export default function SubscriptionGuard({
   }, [loading, subscriptionLoading]);
 
   // Show loading spinner while checking auth and subscription
-  if ((loading || subscriptionLoading) && !loadingTimeout) {
+  // Skip subscription loading for pages that don't require it
+  if ((loading || (subscriptionLoading && requiresSubscription)) && !loadingTimeout) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -75,16 +76,21 @@ export default function SubscriptionGuard({
     );
   }
 
-  // If loading timed out, redirect to billing with error
+  // If loading timed out, allow access with warning
   if (loadingTimeout) {
-    if (!toastMessage) {
-      setToastMessage({
-        title: "Authentication Timeout",
-        description: "Please try logging in again or contact support.",
-        variant: "destructive"
+    console.warn('[SubscriptionGuard] Loading timed out - allowing access');
+    
+    if (!hasShownToast.current) {
+      toast({
+        title: "Slow Connection Detected",
+        description: "Some features may load slowly. Try refreshing if issues persist.",
+        variant: "default"
       });
+      hasShownToast.current = true;
     }
-    return <Navigate to="/billing" replace />;
+    
+    // Allow access anyway - better UX than blocking
+    return <>{children}</>;
   }
 
   // Check authentication first
