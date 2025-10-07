@@ -116,7 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const fetchProfileAndRole = async (userId: string) => {
     try {
-      setSubscriptionLoading(true); // Ensure this is set at the start
+      setSubscriptionLoading(true);
+      console.log('[AuthContext] fetchProfileAndRole starting for user:', userId);
       
       // Fetch role first
       const { data: roleData, error: roleError } = await supabase
@@ -125,8 +126,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single();
 
-      if (roleError) throw roleError;
+      if (roleError) {
+        console.error('[AuthContext] Error fetching role:', roleError);
+        throw roleError;
+      }
 
+      console.log('[AuthContext] Role fetched:', roleData.role);
       setRole(roleData.role);
 
       // Fetch profile for all users (including super admins)
@@ -136,12 +141,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', userId)
         .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('[AuthContext] Error fetching profile:', profileError);
+        throw profileError;
+      }
 
+      console.log('[AuthContext] Profile fetched:', profileData);
       setProfile(profileData);
 
       // Super admins don't need subscription data - skip tenant fetch to prevent infinite loops
       if (roleData.role === 'super_admin') {
+        console.log('[AuthContext] User is super_admin, skipping tenant fetch');
         setTenant(null);
         setSubscriptionConfig(null);
         setSubscriptionLoading(false);
@@ -149,12 +159,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       // Fetch tenant and subscription config (pass role for security filtering)
+      console.log('[AuthContext] Fetching tenant subscription...');
       await fetchTenantSubscription(profileData.tenant_id, 'default', roleData.role);
       
-      console.log('[AuthContext] fetchProfileAndRole completed, subscriptionLoading should now be false');
+      console.log('[AuthContext] fetchProfileAndRole completed successfully');
     } catch (error) {
-      console.error('Error fetching profile/role:', error);
+      console.error('[AuthContext] fetchProfileAndRole failed:', error);
       setSubscriptionLoading(false);
+      throw error; // Re-throw to let caller handle it
     }
   };
 
@@ -242,12 +254,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          await fetchProfileAndRole(session.user.id);
-          // Wait a tick to ensure subscriptionLoading state has propagated
-          setTimeout(() => {
-            console.log('[AuthContext] Setting loading to false');
-            setLoading(false);
-          }, 0);
+          try {
+            await fetchProfileAndRole(session.user.id);
+          } catch (error) {
+            console.error('[AuthContext] Failed to fetch profile/role in auth state change:', error);
+            // Reset states on error
+            setProfile(null);
+            setTenant(null);
+            setRole(null);
+            setSubscriptionConfig(null);
+            setSubscriptionLoading(false);
+          } finally {
+            // Always set loading to false, even if fetching fails
+            setTimeout(() => {
+              console.log('[AuthContext] Setting loading to false');
+              setLoading(false);
+            }, 0);
+          }
         } else {
           setProfile(null);
           setTenant(null);
