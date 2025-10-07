@@ -93,8 +93,8 @@ export default function Login() {
       navigationTimerRef.current = null;
     }
 
-    // Early return conditions - wait for role AND subscription to load
-    if (authLoading || subscriptionLoading || !user || !role || hasRedirectedRef.current || isNavigatingRef.current) {
+    // Early return conditions - navigate immediately once user and role are available
+    if (authLoading || !user || !role || hasRedirectedRef.current || isNavigatingRef.current) {
       return;
     }
 
@@ -127,7 +127,7 @@ export default function Login() {
         navigationTimerRef.current = null;
       }
     };
-  }, [user, authLoading, subscriptionLoading, role, navigate]);
+  }, [user, authLoading, role, navigate]);
 
   // Reset refs on unmount
   useEffect(() => {
