@@ -191,7 +191,7 @@ export default function Signup() {
           await withTimeout(fallbackSignup(data), 20000); // 20 second timeout for fallback
           
           toast.success("Account created successfully! Welcome to LamaniHub.");
-          navigate("/dashboard");
+          navigate("/onboarding");
         } else {
           throw edgeError; // Re-throw non-network errors
         }
