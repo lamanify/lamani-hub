@@ -176,7 +176,7 @@ export default function Signup() {
         }
 
         toast.success("Account created successfully! Welcome to LamaniHub.");
-        navigate("/dashboard");
+        navigate("/onboarding");
         
       } catch (edgeError: any) {
         console.log('Edge function signup failed:', edgeError);

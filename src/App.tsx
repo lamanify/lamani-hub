@@ -23,6 +23,7 @@ import ResetPassword from "./pages/ResetPassword";
 import NotFound from "./pages/NotFound";
 import LeadDetail from "./pages/LeadDetail";
 import FieldsManager from "./pages/FieldsManager";
+import Onboarding from "./pages/Onboarding";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -54,6 +55,11 @@ const App = () => (
             <Route path="/product" element={<Product />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/onboarding" element={
+              <SubscriptionGuard requiresSubscription={false}>
+                <Onboarding />
+              </SubscriptionGuard>
+            } />
             
             {/* Protected Routes - Require Active Subscription */}
             <Route path="/dashboard" element={
