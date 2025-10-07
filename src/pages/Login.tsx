@@ -91,8 +91,8 @@ export default function Login() {
       navigationTimerRef.current = null;
     }
 
-    // Early return conditions
-    if (authLoading || !user || hasRedirectedRef.current || isNavigatingRef.current) {
+    // Early return conditions - wait for role to load as well
+    if (authLoading || !user || !role || hasRedirectedRef.current || isNavigatingRef.current) {
       return;
     }
 
