@@ -79,12 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isAdminUser = userRole === 'super_admin' || userRole === 'clinic_admin';
       console.log('[AuthContext] User is admin:', isAdminUser);
 
-      // Create timeout promise
+      // Create timeout promise - 3 seconds for faster response
       const createTimeout = (name: string) => new Promise((_, reject) => 
         setTimeout(() => {
-          console.error(`[AuthContext] ${name} query TIMEOUT after 10 seconds`);
+          console.error(`[AuthContext] ${name} query TIMEOUT after 3 seconds`);
           reject(new Error(`${name} query timeout`));
-        }, 10000)
+        }, 3000)
       );
 
       let tenantData;
@@ -158,57 +158,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data: { session } } = await supabase.auth.getSession();
       console.log('[AuthContext] Current session:', session?.user?.id);
       
-      // Fetch role first with timeout
-      console.log('[AuthContext] Fetching role...');
+      // Fetch role and profile in parallel - 3 second timeout for each
+      console.log('[AuthContext] Fetching role and profile in parallel...');
+      
       const rolePromise = supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .single();
       
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Role query timeout')), 10000)
-      );
-      
-      const { data: roleData, error: roleError } = await Promise.race([
-        rolePromise,
-        timeoutPromise
-      ]) as any;
-
-      if (roleError) {
-        console.error('[AuthContext] Error fetching role:', roleError);
-        throw roleError;
-      }
-
-      console.log('[AuthContext] Role fetched:', roleData?.role);
-      setRole(roleData.role);
-
-      // Fetch profile for all users (including super admins) - with timeout protection
-      console.log('[AuthContext] Fetching profile...');
       const profilePromise = supabase
         .from('profiles')
         .select('user_id, tenant_id, full_name')
         .eq('user_id', userId)
         .single();
       
-      const profileTimeoutPromise = new Promise((_, reject) => 
+      const createTimeout = (name: string) => new Promise((_, reject) => 
         setTimeout(() => {
-          console.error('[AuthContext] Profile query TIMEOUT after 10 seconds');
-          reject(new Error('Profile query timeout'));
-        }, 10000)
+          console.error(`[AuthContext] ${name} query TIMEOUT after 3 seconds`);
+          reject(new Error(`${name} query timeout`));
+        }, 3000)
       );
 
-      const { data: profileData, error: profileError } = await Promise.race([
-        profilePromise,
-        profileTimeoutPromise
-      ]) as any;
+      // Run both queries in parallel
+      const [roleResult, profileResult] = await Promise.all([
+        Promise.race([rolePromise, createTimeout('Role')]),
+        Promise.race([profilePromise, createTimeout('Profile')])
+      ]);
+
+      const { data: roleData, error: roleError } = roleResult as any;
+      const { data: profileData, error: profileError } = profileResult as any;
+
+      if (roleError) {
+        console.error('[AuthContext] Error fetching role:', roleError);
+        throw roleError;
+      }
 
       if (profileError) {
         console.error('[AuthContext] Error fetching profile:', profileError);
         throw profileError;
       }
 
-      console.log('[AuthContext] Profile fetched:', profileData);
+      console.log('[AuthContext] Role and profile fetched:', { role: roleData?.role, profile: profileData });
+      setRole(roleData.role);
       setProfile(profileData);
 
       // Super admins don't need subscription data - skip tenant fetch to prevent infinite loops
