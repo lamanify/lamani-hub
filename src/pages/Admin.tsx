@@ -54,15 +54,24 @@ export default function Admin() {
   // Update subscription status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ tenantId, status }: { tenantId: string; status: SubscriptionStatus }) => {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tenants')
         .update({ subscription_status: status })
-        .eq('id', tenantId);
+        .eq('id', tenantId)
+        .select()
+        .single();
 
       if (error) throw error;
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-tenants'] });
+    onSuccess: (updatedTenant) => {
+      // Optimistically update the cache with the new data
+      queryClient.setQueryData(['admin-tenants'], (old: Tenant[] | undefined) => {
+        if (!old) return old;
+        return old.map(tenant => 
+          tenant.id === updatedTenant.id ? updatedTenant : tenant
+        );
+      });
       toast({
         title: "Status Updated",
         description: "Subscription status has been updated successfully.",

@@ -189,13 +189,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Refresh subscription every 5 minutes
   useEffect(() => {
     // Super admins don't need subscription refresh timers
-    if (role === 'super_admin') {
+    if (role === 'super_admin' || !profile?.tenant_id || !tenant?.plan_type) {
       return;
     }
 
     const interval = setInterval(() => {
       const fiveMinutes = 5 * 60 * 1000;
-      if (Date.now() - lastSubscriptionFetch > fiveMinutes && profile?.tenant_id && tenant?.plan_type) {
+      if (Date.now() - lastSubscriptionFetch > fiveMinutes) {
         fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
       }
     }, 60000); // Check every minute
@@ -206,17 +206,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Refresh subscription on route change
   useEffect(() => {
     // Super admins don't need subscription refresh on route changes
-    if (role === 'super_admin') {
+    if (role === 'super_admin' || !profile?.tenant_id || !tenant?.plan_type) {
       return;
     }
 
-    if (profile?.tenant_id && tenant?.plan_type) {
-      const threeMinutes = 3 * 60 * 1000;
-      if (Date.now() - lastSubscriptionFetch > threeMinutes) {
-        fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
-      }
+    const threeMinutes = 3 * 60 * 1000;
+    if (Date.now() - lastSubscriptionFetch > threeMinutes) {
+      fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
     }
-  }, [location.pathname, role]);
+  }, [location.pathname, role, profile?.tenant_id, tenant?.plan_type, lastSubscriptionFetch]);
 
   useEffect(() => {
     // Check for existing session
