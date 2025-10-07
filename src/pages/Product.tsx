@@ -76,7 +76,7 @@ const ProductPage = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary via-primary to-primary-dark text-primary-foreground py-20">
+      <section className="bg-gradient-to-br from-primary via-primary to-primary-dark text-primary-foreground py-[120px]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -89,17 +89,7 @@ const ProductPage = () => {
                 Trusted by healthcare providers across Malaysia.
               </p>
               
-              <div className="bg-white text-foreground p-6 rounded-lg mb-8 max-w-md shadow-xl">
-                <div className="flex items-center mb-2">
-                  <span className="text-2xl mr-2">🎁</span>
-                  <h3 className="text-xl font-bold">Start Your Free 14-Day Trial</h3>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">Full access to all features - no credit card required</p>
-                <div className="flex items-baseline">
-                  <span className="text-3xl font-bold text-primary">FREE</span>
-                  <span className="text-lg text-muted-foreground ml-2">for 14 days, then RM49/month</span>
-                </div>
-              </div>
+              
               
               <Button onClick={handleStartTrial} size="lg" variant="secondary" className="text-lg px-8 py-6 h-auto">
                 Start Free Trial Now →
