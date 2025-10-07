@@ -73,44 +73,71 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchTenantSubscription = async (tenantId: string, planType: string, userRole?: string) => {
     try {
       setSubscriptionLoading(true);
+      console.log('[AuthContext] fetchTenantSubscription starting for tenant:', tenantId);
 
       // Determine if user is admin
       const isAdminUser = userRole === 'super_admin' || userRole === 'clinic_admin';
+      console.log('[AuthContext] User is admin:', isAdminUser);
+
+      // Create timeout promise
+      const createTimeout = (name: string) => new Promise((_, reject) => 
+        setTimeout(() => {
+          console.error(`[AuthContext] ${name} query TIMEOUT after 10 seconds`);
+          reject(new Error(`${name} query timeout`));
+        }, 10000)
+      );
 
       let tenantData;
       if (isAdminUser) {
-        // Admins can see all tenant fields
-        const { data, error } = await supabase
+        // Admins can see all tenant fields - with timeout protection
+        console.log('[AuthContext] Fetching tenant data (admin path)...');
+        const tenantPromise = supabase
           .from('tenants')
           .select('*')
           .eq('id', tenantId)
           .single();
-        if (error) throw error;
-        tenantData = data;
+        
+        const result = await Promise.race([tenantPromise, createTimeout('Tenant (admin)')]) as any;
+        if (result.error) throw result.error;
+        tenantData = result.data;
+        console.log('[AuthContext] Tenant data fetched (admin path)');
       } else {
-        // Non-admins only see non-sensitive fields via safe function
-        const { data, error } = await supabase
+        // Non-admins only see non-sensitive fields via safe function - with timeout protection
+        console.log('[AuthContext] Fetching tenant data (non-admin path)...');
+        const rpcPromise = supabase
           .rpc('get_tenant_safe', { p_user_id: user?.id })
           .single();
-        if (error) throw error;
-        tenantData = data;
+        
+        const result = await Promise.race([rpcPromise, createTimeout('Tenant (RPC)')]) as any;
+        if (result.error) throw result.error;
+        tenantData = result.data;
+        console.log('[AuthContext] Tenant data fetched (non-admin path)');
       }
 
-      // Fetch subscription config
-      const { data: configData, error: configError } = await supabase
+      // Fetch subscription config - with timeout protection
+      console.log('[AuthContext] Fetching subscription config...');
+      const configPromise = supabase
         .from('subscription_config')
         .select('plan_type, trial_duration_days, grace_period_days')
         .eq('plan_type', planType)
         .single();
 
-      if (configError) throw configError;
+      const configResult = await Promise.race([configPromise, createTimeout('Subscription config')]) as any;
+      if (configResult.error) throw configResult.error;
 
+      console.log('[AuthContext] Subscription config fetched');
       setTenant(tenantData);
-      setSubscriptionConfig(configData);
+      setSubscriptionConfig(configResult.data);
       setLastSubscriptionFetch(Date.now());
+      console.log('[AuthContext] fetchTenantSubscription completed successfully');
     } catch (error) {
-      console.error('Error fetching subscription:', error);
+      console.error('[AuthContext] Error fetching subscription:', error);
+      // Set fallback values to allow app to continue
+      setTenant(null);
+      setSubscriptionConfig(null);
     } finally {
+      // CRITICAL: Always set loading to false
+      console.log('[AuthContext] Setting subscriptionLoading to false');
       setSubscriptionLoading(false);
     }
   };
