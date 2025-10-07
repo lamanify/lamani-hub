@@ -326,7 +326,7 @@ serve(async (req) => {
           if (leadData.email) existingEmails.add(leadData.email)
         }
 
-      } catch (error) {
+      } catch (error: any) {
         result.errors.push({
           row: rowNumber,
           reason: `Processing error: ${error.message}`
@@ -367,7 +367,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Import error:', error)
     return new Response(
       JSON.stringify({
