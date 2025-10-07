@@ -127,19 +127,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionLoading(true);
       console.log('[AuthContext] fetchProfileAndRole starting for user:', userId);
       
-      // Fetch role first
-      const { data: roleData, error: roleError } = await supabase
+      // Check current session
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('[AuthContext] Current session:', session?.user?.id);
+      
+      // Fetch role first with timeout
+      console.log('[AuthContext] Fetching role...');
+      const rolePromise = supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
         .single();
+      
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Role query timeout')), 10000)
+      );
+      
+      const { data: roleData, error: roleError } = await Promise.race([
+        rolePromise,
+        timeoutPromise
+      ]) as any;
 
       if (roleError) {
         console.error('[AuthContext] Error fetching role:', roleError);
         throw roleError;
       }
 
-      console.log('[AuthContext] Role fetched:', roleData.role);
+      console.log('[AuthContext] Role fetched:', roleData?.role);
       setRole(roleData.role);
 
       // Fetch profile for all users (including super admins)
