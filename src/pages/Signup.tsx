@@ -5,12 +5,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Database, MessageSquare, Shield, Clock, FileCheck, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { mapSupabaseAuthError } from "@/utils/authErrors";
 import logo from "@/assets/lamanify-logo.png";
@@ -228,142 +226,211 @@ export default function Signup() {
     }
   };
 
+  const benefits = [
+    {
+      icon: Database,
+      title: "Centralized Patient Management",
+      description: "Consolidate all patient data, medical histories, and contact information in one secure platform"
+    },
+    {
+      icon: MessageSquare,
+      title: "Malaysian Healthcare Focused",
+      description: "Built specifically for Malaysian clinics with local phone formatting"
+    },
+    {
+      icon: MessageSquare,
+      title: "WhatsApp Integration",
+      description: "Direct click-to-WhatsApp communication for seamless patient engagement"
+    },
+    {
+      icon: Clock,
+      title: "14-Day Free Trial",
+      description: "Full access without credit card required"
+    },
+    {
+      icon: Shield,
+      title: "PDPA Compliant",
+      description: "Secure audit trails, consent management, and data protection for Malaysian healthcare standards"
+    },
+    {
+      icon: Upload,
+      title: "Easy Migration",
+      description: "Import your existing contacts from spreadsheets with smart validation"
+    }
+  ];
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md space-y-6">
-        {/* Logo */}
-        <div className="text-center">
-          <Link to="/">
-            <img src={logo} alt="LamaniHub" className="h-12 mx-auto" />
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* LEFT SECTION - Benefits */}
+      <div className="lg:w-1/2 bg-gray-50 p-8 lg:p-12 flex flex-col justify-center">
+        <div className="max-w-xl mx-auto">
+          <Link to="/" className="inline-block mb-8">
+            <img src={logo} alt="LamaniHub" className="h-10" />
           </Link>
+          
+          <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">
+            Transform Your Healthcare Practice
+          </h1>
+          
+          <p className="text-lg text-muted-foreground mb-12">
+            Join Malaysian clinics already streamlining their patient relationships with LamaniHub
+          </p>
+
+          <div className="space-y-6">
+            {benefits.map((benefit, index) => (
+              <div key={index} className="flex gap-4 items-start">
+                <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <benefit.icon className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground mb-1">{benefit.title}</h3>
+                  <p className="text-sm text-muted-foreground">{benefit.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+      </div>
 
-        {/* Signup Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Create Account</CardTitle>
-            <CardDescription>Get started with LamaniHub today</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSignup)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="clinicName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Clinic Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Your Clinic Name" {...field} disabled={loading} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+      {/* RIGHT SECTION - Signup Form */}
+      <div className="lg:w-1/2 bg-background p-8 lg:p-12 flex flex-col justify-center">
+        <div className="max-w-md mx-auto w-full">
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold text-foreground mb-2">Start Your Free Trial</h2>
+            <p className="text-muted-foreground">No credit card required • 14 days full access</p>
+          </div>
 
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="you@clinic.com" {...field} disabled={loading} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          placeholder="••••••••"
-                          {...field}
-                          disabled={loading}
-                          onChange={(e) => {
-                            field.onChange(e);
-                            handlePasswordChange(e);
-                          }}
-                        />
-                      </FormControl>
-                      <div className="flex items-center gap-2 mt-2">
-                        <div className="flex-1 h-1.5 rounded-full bg-muted">
-                          <div
-                            className={`h-full rounded-full transition-all ${
-                              passwordStrength === "weak"
-                                ? "w-1/3 bg-destructive"
-                                : passwordStrength === "medium"
-                                ? "w-2/3 bg-yellow-500"
-                                : "w-full bg-green-500"
-                            }`}
-                          />
-                        </div>
-                        <span className="text-xs text-muted-foreground capitalize">
-                          {passwordStrength}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Must be 8+ characters with uppercase letter and number
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="termsAccepted"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={loading}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="text-sm font-normal">
-                          I agree to the{" "}
-                          <Link to="/privacy" className="text-primary hover:underline">
-                            Privacy Policy
-                          </Link>{" "}
-                          and Terms of Service
-                        </FormLabel>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
-
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {loading ? "Creating account..." : "Create Account"}
-                </Button>
-                
-                {loading && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    This may take a few moments. Please don't refresh the page.
-                  </p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSignup)} className="space-y-5">
+              <FormField
+                control={form.control}
+                name="clinicName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Clinic Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your Clinic Name" {...field} disabled={loading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </form>
-            </Form>
+              />
 
-            <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">Already have an account? </span>
-              <Link to="/login" className="text-primary hover:underline font-medium">
-                Sign in
-              </Link>
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="you@clinic.com" {...field} disabled={loading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="••••••••"
+                        {...field}
+                        disabled={loading}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          handlePasswordChange(e);
+                        }}
+                      />
+                    </FormControl>
+                    <div className="flex items-center gap-2 mt-2">
+                      <div className="flex-1 h-1.5 rounded-full bg-muted">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            passwordStrength === "weak"
+                              ? "w-1/3 bg-destructive"
+                              : passwordStrength === "medium"
+                              ? "w-2/3 bg-yellow-500"
+                              : "w-full bg-green-500"
+                          }`}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground capitalize">
+                        {passwordStrength}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Must be 8+ characters with uppercase letter and number
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="termsAccepted"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={loading}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel className="text-sm font-normal">
+                        I agree to the{" "}
+                        <Link to="/privacy" className="text-primary hover:underline">
+                          Privacy Policy
+                        </Link>{" "}
+                        and Terms of Service
+                      </FormLabel>
+                      <FormMessage />
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {loading ? "Creating account..." : "Start Free Trial"}
+              </Button>
+              
+              {loading && (
+                <p className="text-xs text-muted-foreground text-center">
+                  This may take a few moments. Please don't refresh the page.
+                </p>
+              )}
+            </form>
+          </Form>
+
+          <div className="mt-6 text-center text-sm">
+            <span className="text-muted-foreground">Already have an account? </span>
+            <Link to="/login" className="text-primary hover:underline font-medium">
+              Sign in here instead
+            </Link>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-border">
+            <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                <span>PDPA Compliant</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-4 h-4" />
+                <span>Powered by Stripe</span>
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
