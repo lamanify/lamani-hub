@@ -15,6 +15,7 @@ import { mapSupabaseAuthError } from "@/utils/authErrors";
 import ForgotPasswordDialog from "@/components/ForgotPasswordDialog";
 import { Loader2 } from "lucide-react";
 import logo from "@/assets/lamanify-logo.png";
+import { supabase } from "@/integrations/supabase/client";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -38,6 +39,24 @@ export default function Login() {
       rememberMe: true
     }
   });
+
+  // Clear cache and force fresh session on mount
+  useEffect(() => {
+    const clearAuthCache = async () => {
+      // Clear any stale session data from localStorage
+      const storageKeys = Object.keys(localStorage);
+      storageKeys.forEach(key => {
+        if (key.includes('supabase.auth.token')) {
+          localStorage.removeItem(key);
+        }
+      });
+      
+      // Force Supabase to re-check session
+      await supabase.auth.refreshSession();
+    };
+
+    clearAuthCache();
+  }, []);
 
   useEffect(() => {
     // Wait for auth to finish loading, then redirect authenticated users
