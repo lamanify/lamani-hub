@@ -93,8 +93,24 @@ export default function Login() {
       navigationTimerRef.current = null;
     }
 
+    // Early returns
+    if (hasRedirectedRef.current || isNavigatingRef.current) {
+      return;
+    }
+
+    // Timeout safety net: if user exists but auth is stuck loading, force navigation after 5 seconds
+    if (user?.id && (authLoading || subscriptionLoading)) {
+      console.log('[Login] Auth/subscription loading with user present, setting 5s timeout');
+      navigationTimerRef.current = setTimeout(() => {
+        console.log('[Login] Timeout reached - forcing navigation despite loading states');
+        hasRedirectedRef.current = true;
+        navigate("/dashboard");
+      }, 5000);
+      return;
+    }
+
     // Early return conditions - navigate immediately once user and role are available
-    if (authLoading || !user || !role || hasRedirectedRef.current || isNavigatingRef.current) {
+    if (authLoading || !user || !role) {
       return;
     }
 

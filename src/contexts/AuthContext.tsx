@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionConfig, setSubscriptionConfig] = useState<SubscriptionConfig | null>(null);
   const [lastSubscriptionFetch, setLastSubscriptionFetch] = useState<number>(0);
+  const fetchingProfileRef = useRef<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -115,7 +116,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const fetchProfileAndRole = async (userId: string) => {
+    // Prevent duplicate concurrent calls for the same user
+    if (fetchingProfileRef.current === userId) {
+      console.log('[AuthContext] Already fetching profile for user:', userId);
+      return;
+    }
+
     try {
+      fetchingProfileRef.current = userId;
       setSubscriptionLoading(true);
       console.log('[AuthContext] fetchProfileAndRole starting for user:', userId);
       
@@ -167,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('[AuthContext] fetchProfileAndRole failed:', error);
       setSubscriptionLoading(false);
       throw error; // Re-throw to let caller handle it
+    } finally {
+      fetchingProfileRef.current = null; // Always clear the flag
     }
   };
 
