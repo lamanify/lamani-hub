@@ -61,16 +61,15 @@ export default function SubscriptionGuard({
     }
   }, [loading, subscriptionLoading]);
 
-  // Check session verification cache first (30-minute duration)
+  // Check session verification cache - valid for full browser session
   const sessionVerified = sessionStorage.getItem('sub_verified');
   if (sessionVerified && !loadingTimeout) {
     try {
-      const { timestamp, status, tenant_id } = JSON.parse(sessionVerified);
-      const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+      const { tenant_id } = JSON.parse(sessionVerified);
       
-      // Verify cache is fresh and belongs to current tenant
-      if (Date.now() - timestamp < CACHE_DURATION && tenant?.id === tenant_id) {
-        console.log('[SubscriptionGuard] Using session verification cache, skipping all checks');
+      // No expiry check - valid until browser closes or manual logout
+      if (tenant?.id === tenant_id) {
+        console.log('[SubscriptionGuard] Using session verification cache (no expiry)');
         return <>{children}</>;
       }
     } catch (e) {
@@ -153,11 +152,9 @@ export default function SubscriptionGuard({
 
   // Allow access for active subscriptions (active, trial, trialing, comped)
   if (status === 'active' || status === 'trial' || status === 'trialing' || status === 'comped') {
-    // Cache session verification for 30 minutes
+    // Cache session verification for full browser session (no expiry)
     try {
       sessionStorage.setItem('sub_verified', JSON.stringify({
-        timestamp: Date.now(),
-        status,
         tenant_id: tenant.id
       }));
     } catch (e) {

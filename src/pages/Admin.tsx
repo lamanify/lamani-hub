@@ -37,7 +37,7 @@ interface Tenant {
 export default function Admin() {
   const queryClient = useQueryClient();
 
-  // Fetch all tenants (real-time data - no caching)
+  // Fetch all tenants with auto-refresh
   const { data: tenants, isLoading } = useQuery({
     queryKey: ['admin-tenants'],
     queryFn: async () => {
@@ -49,8 +49,8 @@ export default function Admin() {
       if (error) throw error;
       return data as Tenant[];
     },
-    staleTime: 0,
-    gcTime: 0,
+    staleTime: 10000, // 10 seconds - allow brief caching
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
     refetchOnWindowFocus: true,
   });
 

@@ -78,24 +78,8 @@ const performanceMetrics: PerformanceMetrics = {
   fetchDurations: [],
 };
 
-// Utility function to generate randomized cache duration
-const getRandomizedCacheDuration = (status: string): number => {
-  const random = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-  if (["active", "comped"].includes(status)) {
-    // 2-6 hours randomized to prevent thundering herd
-    return random(2 * 60 * 60 * 1000, 6 * 60 * 60 * 1000);
-  } else if (["trial", "trialing"].includes(status)) {
-    // 15-30 minutes randomized
-    return random(15 * 60 * 1000, 30 * 60 * 1000);
-  } else if (["past_due", "suspended"].includes(status)) {
-    // 2-10 minutes randomized
-    return random(2 * 60 * 1000, 10 * 60 * 1000);
-  } else {
-    // 5-15 minutes default randomized
-    return random(5 * 60 * 1000, 15 * 60 * 1000);
-  }
-};
+// Fixed cache TTL - 5 minutes for predictable performance
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -147,22 +131,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionLoading(true);
       console.log("[AuthContext] fetchTenantSubscription starting for tenant:", tenantId);
 
-      // Check session storage cache with randomized duration
+      // Check session storage cache with fixed 5-minute TTL
       const cacheKey = `subscription_${tenantId}`;
       const cached = sessionStorage.getItem(cacheKey);
 
       if (cached) {
         try {
-          const { data, timestamp, status } = JSON.parse(cached);
-          const cacheDuration = getRandomizedCacheDuration(status);
+          const { data, timestamp } = JSON.parse(cached);
 
-          if (Date.now() - timestamp < cacheDuration) {
+          if (Date.now() - timestamp < CACHE_TTL) {
             performanceMetrics.cacheHits++;
             console.log(
-              `[AuthContext] CACHE HIT - Using cached subscription data (${status}, ${Math.round(cacheDuration / 1000)}s TTL)`,
-            );
-            console.log(
-              `[AuthContext] Performance - Cache hits: ${performanceMetrics.cacheHits}, misses: ${performanceMetrics.cacheMisses}`,
+              `[AuthContext] CACHE HIT - Using cached subscription data (TTL: ${CACHE_TTL / 1000}s)`,
             );
 
             setTenant(data.tenant);
@@ -171,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSubscriptionLoading(false);
             return; // Use cached data
           } else {
-            console.log(`[AuthContext] Cache expired for status: ${status}`);
+            console.log(`[AuthContext] Cache expired after ${CACHE_TTL / 1000}s`);
           }
         } catch (e) {
           console.warn("[AuthContext] Failed to parse cached subscription:", e);
@@ -251,19 +231,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionConfig(configResult.data);
       setLastSubscriptionFetch(Date.now());
 
-      // Cache the result in session storage with randomized expiry
+      // Cache the result in session storage with fixed 5-minute TTL
       try {
-        const cacheDuration = getRandomizedCacheDuration(tenantData.subscription_status);
         sessionStorage.setItem(
           cacheKey,
           JSON.stringify({
             data: { tenant: tenantData, config: configResult.data },
             timestamp: Date.now(),
-            status: tenantData.subscription_status,
-            cacheDuration: cacheDuration,
           }),
         );
-        console.log(`[AuthContext] Data cached with ${Math.round(cacheDuration / 1000)}s TTL`);
+        console.log(`[AuthContext] Data cached with ${CACHE_TTL / 1000}s TTL`);
       } catch (e) {
         console.warn("[AuthContext] Failed to cache subscription data:", e);
       }
@@ -291,7 +268,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       fetchingProfileRef.current = userId;
-      setSubscriptionLoading(true);
       console.log("[AuthContext] fetchProfileAndRole starting for user:", userId);
 
       // Check current session
@@ -347,37 +323,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log("[AuthContext] User is super_admin, skipping tenant fetch");
         setTenant(null);
         setSubscriptionConfig(null);
-        setSubscriptionLoading(false);
         return;
       }
 
-      // Start background tenant fetch if subscription check is due
+      // Start non-blocking background tenant fetch if subscription check is due
       if (shouldCheckSubscription()) {
-        console.log("[AuthContext] Starting background tenant subscription fetch...");
-        backgroundFetchRef.current = fetchTenantSubscription(profileData.tenant_id, "default", roleData.role);
-
-        // Set a 10-second timeout for background fetch completion
-        setTimeout(async () => {
-          if (backgroundFetchRef.current) {
-            try {
-              await backgroundFetchRef.current;
-              console.log("[AuthContext] Background fetch completed within timeout");
-            } catch (error) {
-              console.warn("[AuthContext] Background fetch timeout or error:", error);
-            } finally {
-              backgroundFetchRef.current = null;
-            }
-          }
-        }, 10000);
+        console.log("[AuthContext] Starting non-blocking background tenant subscription fetch...");
+        
+        // Fire and forget - don't block on subscription data
+        fetchTenantSubscription(profileData.tenant_id, "default", roleData.role).catch((error) => {
+          console.warn("[AuthContext] Background subscription fetch failed:", error);
+        });
       } else {
         console.log("[AuthContext] Skipping subscription check due to debouncing (last check was recent)");
-        setSubscriptionLoading(false);
       }
 
-      console.log("[AuthContext] fetchProfileAndRole completed successfully");
+      console.log("[AuthContext] fetchProfileAndRole completed successfully (non-blocking)");
     } catch (error) {
       console.error("[AuthContext] fetchProfileAndRole failed:", error);
-      setSubscriptionLoading(false);
       setLoading(false); // Ensure loading state is cleared on error
       throw error; // Re-throw to let caller handle it
     } finally {

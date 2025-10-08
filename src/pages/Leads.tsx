@@ -81,7 +81,7 @@ const sourceIcons: Record<string, any> = {
 
 export default function Leads() {
   const navigate = useNavigate();
-  const { user, profile, tenant } = useAuth();
+  const { user, profile, tenant, role } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -126,9 +126,14 @@ export default function Leads() {
 
   // Fetch leads with filters (real-time data - no caching)
   const { data: leads, isLoading } = useQuery({
-    queryKey: ["leads", debouncedSearch, statusFilter, sourceFilter, sortColumn, sortDirection],
+    queryKey: ["leads", debouncedSearch, statusFilter, sourceFilter, sortColumn, sortDirection, tenant?.id, role],
     queryFn: async () => {
       let query = supabase.from("leads").select("*").limit(50);
+
+      // Filter by tenant_id for non-super-admins
+      if (role !== 'super_admin' && tenant?.id) {
+        query = query.eq("tenant_id", tenant.id);
+      }
 
       // Apply sorting
       if (sortColumn.startsWith("custom->")) {
