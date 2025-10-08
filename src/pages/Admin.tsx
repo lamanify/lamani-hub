@@ -62,9 +62,10 @@ export default function Admin() {
         .update({ subscription_status: status })
         .eq('id', tenantId)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) throw new Error('Tenant not found or update not allowed');
       return data;
     },
     onSuccess: (updatedTenant) => {
