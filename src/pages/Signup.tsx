@@ -16,11 +16,12 @@ import logo from "@/assets/lamanify-logo.png";
 const signupSchema = z.object({
   clinicName: z.string().min(2, "Clinic name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
-  password: z.string()
+  password: z
+    .string()
     .min(8, "Password must be at least 8 characters")
     .regex(/[A-Z]/, "Must contain at least one uppercase letter")
     .regex(/[0-9]/, "Must contain at least one number"),
-  termsAccepted: z.boolean().refine(val => val === true, "You must accept the terms and conditions")
+  termsAccepted: z.boolean().refine((val) => val === true, "You must accept the terms and conditions"),
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -36,43 +37,44 @@ export default function Signup() {
       clinicName: "",
       email: "",
       password: "",
-      termsAccepted: false
-    }
+      termsAccepted: false,
+    },
   });
 
-  // Complete auth state reset on mount
+  // Aggressive Supabase auth reset on page mount
   useEffect(() => {
-    const initAuth = async () => {
-      // Full sign out to reset Supabase client state
-      await supabase.auth.signOut({ scope: 'local' });
-      
-      // Clear all Supabase-related keys from both localStorage and sessionStorage
-      ['localStorage', 'sessionStorage'].forEach(storageType => {
-        const storage = storageType === 'localStorage' ? localStorage : sessionStorage;
-        const keys = Object.keys(storage);
-        keys.forEach(key => {
-          if (key.includes('supabase')) {
-            storage.removeItem(key);
+    // Fully clear all possible Supabase auth state!
+    (async () => {
+      try {
+        await supabase.auth.signOut({ scope: "local" });
+      } catch (err) {}
+      ["localStorage", "sessionStorage"].forEach((storageName) => {
+        try {
+          const storage = window[storageName];
+          for (const key in storage) {
+            if (key.includes("supabase")) storage.removeItem(key);
           }
-        });
+        } catch (err) {}
       });
-      
-      // Get fresh session state
-      await supabase.auth.getSession();
-    };
-
-    initAuth();
+      // Remove Supabase cookies if any
+      document.cookie.split(";").forEach((c) => {
+        const eqPos = c.indexOf("=");
+        const name = eqPos > -1 ? c.substr(0, eqPos).trim() : c.trim();
+        if (name.startsWith("sb-")) {
+          document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
+        }
+      });
+    })();
   }, []);
 
+  // Password strength calculation
   const calculatePasswordStrength = (password: string): "weak" | "medium" | "strong" => {
     if (password.length < 8) return "weak";
-    
     let strength = 0;
     if (password.length >= 8) strength++;
     if (/[A-Z]/.test(password)) strength++;
     if (/[0-9]/.test(password)) strength++;
     if (/[^A-Za-z0-9]/.test(password)) strength++;
-
     if (strength <= 2) return "weak";
     if (strength === 3) return "medium";
     return "strong";
@@ -84,20 +86,17 @@ export default function Signup() {
     setPasswordStrength(calculatePasswordStrength(value));
   };
 
-  // Create a timeout wrapper for network requests
+  // Timeout wrapper for network requests
   const withTimeout = <T,>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
     return Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('Request timeout')), timeoutMs);
-      })
+        setTimeout(() => reject(new Error("Request timeout")), timeoutMs);
+      }),
     ]);
   };
 
-  // Fallback direct signup method using Supabase Auth
   const fallbackSignup = async (data: SignupFormData): Promise<void> => {
-    console.log('Using fallback signup method...');
-    
     const { error } = await supabase.auth.signUp({
       email: data.email.trim(),
       password: data.password,
@@ -105,24 +104,20 @@ export default function Signup() {
         data: {
           clinic_name: data.clinicName,
           full_name: data.clinicName,
-          role: 'clinic_admin',
-        }
-      }
+          role: "clinic_admin",
+        },
+      },
     });
+    if (error) throw error;
 
-    if (error) {
-      throw error;
-    }
-
-    // Check if user was created and sign them in
+    // Try to sign in
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: data.email.trim(),
-      password: data.password
+      password: data.password,
     });
 
     if (signInError) {
-      // If sign-in fails, the user might need to confirm their email
-      if (signInError.message.includes('Email not confirmed')) {
+      if (signInError.message.includes("Email not confirmed")) {
         toast.success("Account created! Please check your email to confirm your account.");
         return;
       }
@@ -132,43 +127,38 @@ export default function Signup() {
 
   const handleSignup = async (data: SignupFormData) => {
     setLoading(true);
-    
-    // Clear any existing form errors
     form.clearErrors();
 
     try {
-      // First try the edge function approach with timeout
+      // Call edge function first
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        
         const response = await withTimeout(
           fetch(`${supabaseUrl}/functions/v1/signup-with-tenant`, {
-            method: 'POST',
+            method: "POST",
             headers: {
-              'Content-Type': 'application/json',
-              'apikey': supabaseKey
+              "Content-Type": "application/json",
+              apikey: supabaseKey,
             },
             body: JSON.stringify({
               clinicName: data.clinicName,
               email: data.email.trim(),
               password: data.password,
-              termsAccepted: data.termsAccepted
-            })
+              termsAccepted: data.termsAccepted,
+            }),
           }),
-          15000 // 15 second timeout for edge function
+          15000,
         );
-
         const result = await response.json();
 
         if (!response.ok) {
-          // Handle errors from edge function
-          const mappedError = mapSupabaseAuthError(new Error(result.error || 'Signup failed'), 'signup');
-          
+          // Edge function error
+          const mappedError = mapSupabaseAuthError(new Error(result.error || "Signup failed"), "signup");
           if (mappedError.field) {
             form.setError(mappedError.field, {
-              type: 'server',
-              message: mappedError.message
+              type: "server",
+              message: mappedError.message,
             });
           } else {
             toast.error(mappedError.message);
@@ -180,18 +170,16 @@ export default function Signup() {
         const { error: signInError } = await withTimeout(
           supabase.auth.signInWithPassword({
             email: data.email.trim(),
-            password: data.password
+            password: data.password,
           }),
-          10000 // 10 second timeout for sign-in
+          10000,
         );
-
         if (signInError) {
-          const mappedError = mapSupabaseAuthError(signInError, 'signin');
-          
+          const mappedError = mapSupabaseAuthError(signInError, "signin");
           if (mappedError.field) {
             form.setError(mappedError.field, {
-              type: 'server',
-              message: mappedError.message
+              type: "server",
+              message: mappedError.message,
             });
           } else {
             toast.error(mappedError.message);
@@ -201,45 +189,36 @@ export default function Signup() {
 
         toast.success("Account created successfully! Welcome to LamaniHub.");
         navigate("/onboarding");
-        
       } catch (edgeError: any) {
-        console.log('Edge function signup failed:', edgeError);
-        
-        // If edge function fails or times out, use fallback method
-        if (edgeError.message === 'Request timeout' || 
-            edgeError.message.includes('timeout') ||
-            edgeError.message.includes('network') ||
-            edgeError.message.includes('Failed to fetch')) {
-          
-          console.log('Network issue detected, using fallback signup...');
-          await withTimeout(fallbackSignup(data), 20000); // 20 second timeout for fallback
-          
+        console.log("Edge function signup failed:", edgeError);
+
+        // Fallback if network/timeout
+        if (
+          edgeError.message === "Request timeout" ||
+          edgeError.message.toLowerCase().includes("timeout") ||
+          edgeError.message.toLowerCase().includes("network") ||
+          edgeError.message.includes("Failed to fetch")
+        ) {
+          await withTimeout(fallbackSignup(data), 20000);
           toast.success("Account created successfully! Welcome to LamaniHub.");
           navigate("/onboarding");
         } else {
-          throw edgeError; // Re-throw non-network errors
+          throw edgeError;
         }
       }
-
     } catch (error: any) {
-      console.error('Signup error:', error);
-      
-      // Use the auth error mapping utility
-      const mappedError = mapSupabaseAuthError(error, 'signup');
-      
+      const mappedError = mapSupabaseAuthError(error, "signup");
       if (mappedError.field) {
-        // Set the error on the specific form field
         form.setError(mappedError.field, {
-          type: 'server',
-          message: mappedError.message
+          type: "server",
+          message: mappedError.message,
         });
       } else {
-        // Show general error as toast for non-field errors
-        if (error.message === 'Request timeout') {
+        if (error.message === "Request timeout") {
           toast.error("Signup is taking longer than expected. Please check your internet connection and try again.", {
-            duration: 6000
+            duration: 6000,
           });
-        } else if (error.message.includes("network") || error.message.includes("Failed to fetch")) {
+        } else if (error.message.toLowerCase().includes("network") || error.message.includes("Failed to fetch")) {
           toast.error("Network error. Please check your internet connection and try again.");
         } else {
           toast.error(mappedError.message);
@@ -254,52 +233,43 @@ export default function Signup() {
     {
       icon: Database,
       title: "Centralized Patient Management",
-      description: "Consolidate all patient data, medical histories, and contact information in one secure platform"
+      description: "Consolidate all patient data, medical histories, and contact information in one secure platform",
     },
     {
       icon: MessageSquare,
       title: "Malaysian Healthcare Focused",
-      description: "Built specifically for Malaysian clinics with local phone formatting"
+      description: "Built specifically for Malaysian clinics with local phone formatting",
     },
     {
       icon: MessageSquare,
       title: "WhatsApp Integration",
-      description: "Direct click-to-WhatsApp communication for seamless patient engagement"
+      description: "Direct click-to-WhatsApp communication for seamless patient engagement",
     },
-    {
-      icon: Clock,
-      title: "14-Day Free Trial",
-      description: "Full access without credit card required"
-    },
+    { icon: Clock, title: "14-Day Free Trial", description: "Full access without credit card required" },
     {
       icon: Shield,
       title: "PDPA Compliant",
-      description: "Secure audit trails, consent management, and data protection for Malaysian healthcare standards"
+      description: "Secure audit trails, consent management, and data protection for Malaysian healthcare standards",
     },
     {
       icon: Upload,
       title: "Easy Migration",
-      description: "Import your existing contacts from spreadsheets with smart validation"
-    }
+      description: "Import your existing contacts from spreadsheets with smart validation",
+    },
   ];
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* LEFT SECTION - Benefits */}
+      {/* LEFT SECTION */}
       <div className="lg:w-1/2 bg-gray-50 p-8 lg:p-12 flex flex-col justify-center">
         <div className="max-w-xl mx-auto">
           <Link to="/" className="inline-block mb-8">
             <img src={logo} alt="LamaniHub" className="h-10" />
           </Link>
-          
-          <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            Transform Your Healthcare Practice
-          </h1>
-          
+          <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">Transform Your Healthcare Practice</h1>
           <p className="text-lg text-muted-foreground mb-12">
             Join Malaysian clinics already streamlining their patient relationships with LamaniHub
           </p>
-
           <div className="space-y-6">
             {benefits.map((benefit, index) => (
               <div key={index} className="flex gap-4 items-start">
@@ -315,15 +285,13 @@ export default function Signup() {
           </div>
         </div>
       </div>
-
-      {/* RIGHT SECTION - Signup Form */}
+      {/* RIGHT SECTION */}
       <div className="lg:w-1/2 bg-background p-8 lg:p-12 flex flex-col justify-center">
         <div className="max-w-md mx-auto w-full">
           <div className="mb-8">
             <h2 className="text-3xl font-bold text-foreground mb-2">Start Your Free Trial</h2>
             <p className="text-muted-foreground">No credit card required • 14 days full access</p>
           </div>
-
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSignup)} className="space-y-5">
               <FormField
@@ -339,7 +307,6 @@ export default function Signup() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="email"
@@ -353,7 +320,6 @@ export default function Signup() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="password"
@@ -375,18 +341,11 @@ export default function Signup() {
                     <div className="flex items-center gap-2 mt-2">
                       <div className="flex-1 h-1.5 rounded-full bg-muted">
                         <div
-                          className={`h-full rounded-full transition-all ${
-                            passwordStrength === "weak"
-                              ? "w-1/3 bg-destructive"
-                              : passwordStrength === "medium"
-                              ? "w-2/3 bg-yellow-500"
-                              : "w-full bg-green-500"
-                          }`}
+                          className={`h-full rounded-full transition-all 
+                          ${passwordStrength === "weak" ? "w-1/3 bg-destructive" : passwordStrength === "medium" ? "w-2/3 bg-yellow-500" : "w-full bg-green-500"}`}
                         />
                       </div>
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {passwordStrength}
-                      </span>
+                      <span className="text-xs text-muted-foreground capitalize">{passwordStrength}</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Must be 8+ characters with uppercase letter and number
@@ -395,18 +354,13 @@ export default function Signup() {
                   </FormItem>
                 )}
               />
-
               <FormField
                 control={form.control}
                 name="termsAccepted"
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                     <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        disabled={loading}
-                      />
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={loading} />
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel className="text-sm font-normal">
@@ -421,12 +375,10 @@ export default function Signup() {
                   </FormItem>
                 )}
               />
-
               <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {loading ? "Creating account..." : "Start Free Trial"}
               </Button>
-              
               {loading && (
                 <p className="text-xs text-muted-foreground text-center">
                   This may take a few moments. Please don't refresh the page.
@@ -434,14 +386,12 @@ export default function Signup() {
               )}
             </form>
           </Form>
-
           <div className="mt-6 text-center text-sm">
             <span className="text-muted-foreground">Already have an account? </span>
             <Link to="/login" className="text-primary hover:underline font-medium">
               Sign in here instead
             </Link>
           </div>
-
           <div className="mt-8 pt-6 border-t border-border">
             <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
