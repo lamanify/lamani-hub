@@ -53,11 +53,6 @@ export default function SubscriptionGuard({
       const timer = setTimeout(() => {
         console.error('[SubscriptionGuard] Loading timeout - taking too long');
         setLoadingTimeout(true);
-        toast({
-          title: "Loading Error",
-          description: "Authentication is taking too long. Please try refreshing the page.",
-          variant: "destructive"
-        });
       }, 5000); // 5 second timeout
 
       return () => clearTimeout(timer);
@@ -113,13 +108,12 @@ export default function SubscriptionGuard({
   if (loadingTimeout) {
     console.warn('[SubscriptionGuard] Loading timed out - allowing access');
     
-    if (!hasShownToast.current) {
-      toast({
+    if (!toastMessage) {
+      setToastMessage({
         title: "Slow Connection Detected",
         description: "Some features may load slowly. Try refreshing if issues persist.",
         variant: "default"
       });
-      hasShownToast.current = true;
     }
     
     // Allow access anyway - better UX than blocking
