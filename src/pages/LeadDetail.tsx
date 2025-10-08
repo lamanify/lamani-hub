@@ -80,6 +80,18 @@ interface AuditLog {
   profiles?: { full_name: string };
 }
 
+// Valid lead statuses - must match your database enum
+const VALID_LEAD_STATUSES = [
+  'new_inquiry',
+  'contact_attempted', 
+  'contacted',
+  'appointment_scheduled',
+  'consultation_complete',
+  'treatment_in_progress',
+  'inactive',
+  'disqualified'
+] as const;
+
 const actionIcons: Record<string, any> = {
   lead_create: Plus,
   lead_update: Pencil,
@@ -231,7 +243,8 @@ export default function LeadDetail() {
       });
       navigate("/leads");
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error('[LeadDetail] Delete error:', error);
       toast({
         title: "Error",
         description: "Failed to delete lead. Please try again.",
@@ -240,25 +253,43 @@ export default function LeadDetail() {
     },
   });
 
-  // Status change mutation
+  // Status change mutation with improved error handling
   const statusMutation = useMutation({
     mutationFn: async (newStatus: string) => {
-      const oldStatus = lead?.status;
+      // Validate status before sending to database
+      if (!VALID_LEAD_STATUSES.includes(newStatus as any)) {
+        throw new Error(`Invalid status: ${newStatus}`);
+      }
 
-      const { error } = await supabase
+      const oldStatus = lead?.status;
+      console.log(`[LeadDetail] Updating status from ${oldStatus} to ${newStatus}`);
+
+      // Update with proper error handling and return updated data
+      const { data, error } = await supabase
         .from("leads")
         .update({
-          status: newStatus as any,
+          status: newStatus,
           modified_by: user?.id,
           updated_at: new Date().toISOString(),
         })
-        .eq("id", id!);
+        .eq("id", id!)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[LeadDetail] Status update error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error('No rows updated - check if lead exists and you have permission');
+      }
+
+      console.log('[LeadDetail] Status updated successfully:', data);
 
       // Log audit entry
       if (profile?.tenant_id) {
-        await supabase.from("audit_log").insert({
+        const { error: auditError } = await supabase.from("audit_log").insert({
           tenant_id: profile.tenant_id,
           user_id: user?.id,
           action: "lead_update",
@@ -269,22 +300,58 @@ export default function LeadDetail() {
             new_value: newStatus,
           },
         });
+
+        if (auditError) {
+          console.warn('[LeadDetail] Audit log error:', auditError);
+          // Don't throw here - status update succeeded
+        }
       }
+
+      return data;
     },
-    onSuccess: (_, newStatus) => {
+    onMutate: async (newStatus) => {
+      // Optimistic update
+      await queryClient.cancelQueries({ queryKey: ["lead", id] });
+      
+      const previousLead = queryClient.getQueryData(["lead", id]);
+      
+      queryClient.setQueryData(["lead", id], (old: any) => ({
+        ...old,
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+        modified_by: user?.id,
+      }));
+
+      return { previousLead };
+    },
+    onSuccess: (data, newStatus) => {
+      // Invalidate and refetch related queries
       queryClient.invalidateQueries({ queryKey: ["lead", id] });
       queryClient.invalidateQueries({ queryKey: ["audit", id] });
       queryClient.invalidateQueries({ queryKey: ["leads"] });
+      
       toast({
         title: "Status updated",
         description: `Status changed to ${newStatus.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`,
       });
       setStatusChanging(false);
     },
-    onError: () => {
+    onError: (error: any, newStatus, context) => {
+      // Rollback optimistic update
+      if (context?.previousLead) {
+        queryClient.setQueryData(["lead", id], context.previousLead);
+      }
+
+      console.error('[LeadDetail] Status mutation error:', error);
+      
+      // Show detailed error message
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to update status. Please try again.';
+
       toast({
-        title: "Error",
-        description: "Failed to update status. Please try again.",
+        title: "Error updating status",
+        description: errorMessage,
         variant: "destructive",
       });
       setStatusChanging(false);
@@ -446,7 +513,7 @@ export default function LeadDetail() {
                     <Select
                       value={lead.status}
                       onValueChange={handleStatusChange}
-                      disabled={statusChanging}
+                      disabled={statusChanging || statusMutation.isPending}
                     >
                       <SelectTrigger className="w-full mt-1">
                         <SelectValue />
@@ -462,7 +529,7 @@ export default function LeadDetail() {
                         <SelectItem value="disqualified">Disqualified</SelectItem>
                       </SelectContent>
                     </Select>
-                    {statusChanging && (
+                    {(statusChanging || statusMutation.isPending) && (
                       <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
                         <Loader2 className="h-3 w-3 animate-spin" />
                         Updating...
@@ -610,8 +677,7 @@ export default function LeadDetail() {
                 })}
               </div>
             </CardContent>
-          </Card>
-        )}
+        </Card>
       </div>
 
       {/* Edit Modal */}
