@@ -3,12 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { 
-  AlertCircle, 
-  Eye, 
-  EyeOff, 
-  Copy, 
-  RefreshCw, 
+import {
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Copy,
+  RefreshCw,
   ExternalLink,
   CheckCircle,
   Database,
@@ -53,10 +53,7 @@ const profileSchema = z.object({
 const dpoSchema = z.object({
   dpo_name: z.string().min(2, "DPO name must be at least 2 characters"),
   dpo_email: z.string().email("Valid email required"),
-  dpo_phone: z.string().refine(
-    (val) => isValidMalaysianPhone(val),
-    "Valid Malaysian phone required"
-  ),
+  dpo_phone: z.string().refine((val) => isValidMalaysianPhone(val), "Valid Malaysian phone required"),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -75,11 +72,7 @@ export default function Settings() {
     queryKey: ["tenant", tenant?.id],
     queryFn: async () => {
       if (!tenant?.id) throw new Error("No tenant ID");
-      const { data, error } = await supabase
-        .from("tenants")
-        .select("*")
-        .eq("id", tenant.id)
-        .single();
+      const { data, error } = await supabase.from("tenants").select("*").eq("id", tenant.id).single();
       if (error) throw error;
       return data;
     },
@@ -120,7 +113,7 @@ export default function Settings() {
       // Update tenant name
       const { error: tenantError } = await supabase
         .from("tenants")
-        .update({ 
+        .update({
           name: data.clinicName,
           updated_at: new Date().toISOString(),
         })
@@ -142,7 +135,7 @@ export default function Settings() {
         user_id: user?.id,
         action: "settings_updated",
         resource_id: tenant?.id,
-        details: { 
+        details: {
           clinic_name: data.clinicName,
           full_name: data.fullName,
         },
@@ -196,32 +189,34 @@ export default function Settings() {
   // Regenerate API key mutation (using secure edge function)
   const regenerateApiKeyMutation = useMutation({
     mutationFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
       if (!session) {
-        throw new Error('No active session');
+        throw new Error("No active session");
       }
 
-      const { data, error } = await supabase.functions.invoke('regenerate-api-key', {
+      const { data, error } = await supabase.functions.invoke("regenerate-api-key", {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
       });
 
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || 'Failed to regenerate API key');
+      if (!data?.success) throw new Error(data?.error || "Failed to regenerate API key");
 
       return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["tenant"] });
-      
+
       // Show success with grace period warning
       toast.success(
         `API key regenerated! Old key (ending ${data.old_key_last_4}) remains valid for ${data.grace_period_minutes} minutes.`,
-        { duration: 10000 }
+        { duration: 10000 },
       );
-      
+
       setRegenerateDialogOpen(false);
     },
     onError: (error: any) => {
@@ -267,9 +262,7 @@ export default function Settings() {
         {/* Header */}
         <div>
           <h1 className="text-3xl font-semibold">Settings</h1>
-          <p className="text-muted-foreground mt-2">
-            Manage your clinic settings and compliance information
-          </p>
+          <p className="text-muted-foreground mt-2">Manage your clinic settings and compliance information</p>
         </div>
 
         {/* Custom Fields Link */}
@@ -283,9 +276,7 @@ export default function Settings() {
                   </div>
                   <div>
                     <CardTitle>Custom Fields</CardTitle>
-                    <CardDescription>
-                      Manage fields that appear on your leads
-                    </CardDescription>
+                    <CardDescription>Manage fields that appear on your leads</CardDescription>
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -308,9 +299,7 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle>Clinic Information</CardTitle>
-                <CardDescription>
-                  Basic information about your clinic
-                </CardDescription>
+                <CardDescription>Basic information about your clinic</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
@@ -327,9 +316,7 @@ export default function Settings() {
                 </div>
 
                 <form
-                  onSubmit={profileForm.handleSubmit((data) =>
-                    saveProfileMutation.mutate(data)
-                  )}
+                  onSubmit={profileForm.handleSubmit((data) => saveProfileMutation.mutate(data))}
                   className="space-y-4"
                 >
                   <div className="space-y-2">
@@ -341,26 +328,19 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                     {profileForm.formState.errors.clinicName && (
-                      <p className="text-sm text-destructive">
-                        {profileForm.formState.errors.clinicName.message}
-                      </p>
+                      <p className="text-sm text-destructive">{profileForm.formState.errors.clinicName.message}</p>
                     )}
                   </div>
 
                   {!isAdmin && (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Only administrators can edit clinic settings
-                      </AlertDescription>
+                      <AlertDescription>Only administrators can edit clinic settings</AlertDescription>
                     </Alert>
                   )}
 
                   {isAdmin && (
-                    <Button
-                      type="submit"
-                      disabled={saveProfileMutation.isPending}
-                    >
+                    <Button type="submit" disabled={saveProfileMutation.isPending}>
                       {saveProfileMutation.isPending ? "Saving..." : "Save Changes"}
                     </Button>
                   )}
@@ -371,43 +351,25 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle>User Profile</CardTitle>
-                <CardDescription>
-                  Your personal information
-                </CardDescription>
+                <CardDescription>Your personal information</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <form
-                  onSubmit={profileForm.handleSubmit((data) =>
-                    saveProfileMutation.mutate(data)
-                  )}
+                  onSubmit={profileForm.handleSubmit((data) => saveProfileMutation.mutate(data))}
                   className="space-y-4"
                 >
                   <div className="space-y-2">
                     <Label htmlFor="fullName">Full Name</Label>
-                    <Input
-                      id="fullName"
-                      {...profileForm.register("fullName")}
-                      placeholder="Your Full Name"
-                    />
+                    <Input id="fullName" {...profileForm.register("fullName")} placeholder="Your Full Name" />
                     {profileForm.formState.errors.fullName && (
-                      <p className="text-sm text-destructive">
-                        {profileForm.formState.errors.fullName.message}
-                      </p>
+                      <p className="text-sm text-destructive">{profileForm.formState.errors.fullName.message}</p>
                     )}
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="email">Email Address</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={user?.email || ""}
-                      disabled
-                      className="bg-muted"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Email cannot be changed
-                    </p>
+                    <Input id="email" type="email" value={user?.email || ""} disabled className="bg-muted" />
+                    <p className="text-xs text-muted-foreground">Email cannot be changed</p>
                   </div>
 
                   <div className="space-y-2">
@@ -419,10 +381,7 @@ export default function Settings() {
                     </div>
                   </div>
 
-                  <Button
-                    type="submit"
-                    disabled={saveProfileMutation.isPending}
-                  >
+                  <Button type="submit" disabled={saveProfileMutation.isPending}>
                     {saveProfileMutation.isPending ? "Saving..." : "Save Changes"}
                   </Button>
                 </form>
@@ -435,12 +394,10 @@ export default function Settings() {
             <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription>
-                <strong className="text-yellow-900 dark:text-yellow-100">
-                  PDPA 2024 Compliance Requirement
-                </strong>
+                <strong className="text-yellow-900 dark:text-yellow-100">PDPA 2024 Compliance Requirement</strong>
                 <p className="mt-1 text-yellow-800 dark:text-yellow-200">
-                  Malaysian businesses must designate a Data Protection Officer (DPO) by June 1, 2025.
-                  This information will be included in privacy notices and data breach notifications.
+                  Malaysian businesses must designate a Data Protection Officer (DPO) by June 1, 2025. This information
+                  will be included in privacy notices and data breach notifications.
                 </p>
               </AlertDescription>
             </Alert>
@@ -448,17 +405,10 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle>Data Protection Officer (DPO)</CardTitle>
-                <CardDescription>
-                  Designate your DPO for PDPA compliance
-                </CardDescription>
+                <CardDescription>Designate your DPO for PDPA compliance</CardDescription>
               </CardHeader>
               <CardContent>
-                <form
-                  onSubmit={dpoForm.handleSubmit((data) =>
-                    saveDpoMutation.mutate(data)
-                  )}
-                  className="space-y-4"
-                >
+                <form onSubmit={dpoForm.handleSubmit((data) => saveDpoMutation.mutate(data))} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="dpo_name">Data Protection Officer Name</Label>
                     <Input
@@ -468,9 +418,7 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                     {dpoForm.formState.errors.dpo_name && (
-                      <p className="text-sm text-destructive">
-                        {dpoForm.formState.errors.dpo_name.message}
-                      </p>
+                      <p className="text-sm text-destructive">{dpoForm.formState.errors.dpo_name.message}</p>
                     )}
                   </div>
 
@@ -484,9 +432,7 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                     {dpoForm.formState.errors.dpo_email && (
-                      <p className="text-sm text-destructive">
-                        {dpoForm.formState.errors.dpo_email.message}
-                      </p>
+                      <p className="text-sm text-destructive">{dpoForm.formState.errors.dpo_email.message}</p>
                     )}
                   </div>
 
@@ -499,26 +445,19 @@ export default function Settings() {
                       disabled={!isAdmin}
                     />
                     {dpoForm.formState.errors.dpo_phone && (
-                      <p className="text-sm text-destructive">
-                        {dpoForm.formState.errors.dpo_phone.message}
-                      </p>
+                      <p className="text-sm text-destructive">{dpoForm.formState.errors.dpo_phone.message}</p>
                     )}
                   </div>
 
                   {!isAdmin && (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>
-                        Only administrators can edit DPO information
-                      </AlertDescription>
+                      <AlertDescription>Only administrators can edit DPO information</AlertDescription>
                     </Alert>
                   )}
 
                   {isAdmin && (
-                    <Button
-                      type="submit"
-                      disabled={saveDpoMutation.isPending}
-                    >
+                    <Button type="submit" disabled={saveDpoMutation.isPending}>
                       {saveDpoMutation.isPending ? "Saving..." : "Save DPO Information"}
                     </Button>
                   )}
@@ -529,9 +468,7 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle>Data Retention Policy</CardTitle>
-                <CardDescription>
-                  Automatic data deletion settings
-                </CardDescription>
+                <CardDescription>Automatic data deletion settings</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-start gap-3 p-4 bg-muted rounded-lg">
@@ -549,9 +486,7 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle>Right to be Forgotten</CardTitle>
-                <CardDescription>
-                  Patient data deletion requests
-                </CardDescription>
+                <CardDescription>Patient data deletion requests</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
@@ -572,9 +507,7 @@ export default function Settings() {
             <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
               <Database className="h-4 w-4 text-blue-600" />
               <AlertDescription>
-                <strong className="text-blue-900 dark:text-blue-100">
-                  API Integration Available
-                </strong>
+                <strong className="text-blue-900 dark:text-blue-100">API Integration Available</strong>
                 <p className="mt-1 text-blue-800 dark:text-blue-200">
                   Connect your website forms, CRM tools, or automation platforms directly to LamaniHub.
                 </p>
@@ -606,11 +539,7 @@ export default function Settings() {
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <Input
-                          value={
-                            showApiKey
-                              ? tenantData?.api_key || ""
-                              : "••••••••••••••••••••••••••••••••"
-                          }
+                          value={showApiKey ? tenantData?.api_key || "" : "••••••••••••••••••••••••••••••••"}
                           readOnly
                           className="pr-10 font-mono text-sm"
                         />
@@ -621,18 +550,10 @@ export default function Settings() {
                           className="absolute right-0 top-0 h-full"
                           onClick={() => setShowApiKey(!showApiKey)}
                         >
-                          {showApiKey ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
+                          {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyApiKey}
-                      >
+                      <Button variant="outline" size="icon" onClick={handleCopyApiKey}>
                         <Copy className="h-4 w-4" />
                       </Button>
                     </div>
@@ -652,15 +573,13 @@ export default function Settings() {
                     </Button>
                   </div>
 
-                  <AlertDialog
-                    open={regenerateDialogOpen}
-                    onOpenChange={setRegenerateDialogOpen}
-                  >
+                  <AlertDialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>Regenerate API Key?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will invalidate your current API key. Any integrations using the old key will stop working. This action cannot be undone.
+                          This will invalidate your current API key. Any integrations using the old key will stop
+                          working. This action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -682,9 +601,7 @@ export default function Settings() {
               <Card>
                 <CardHeader>
                   <CardTitle>API Integration</CardTitle>
-                  <CardDescription>
-                    Connect LamaniHub with your website or automation tools
-                  </CardDescription>
+                  <CardDescription>Connect LamaniHub with your website or automation tools</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p className="text-sm text-muted-foreground">
@@ -696,21 +613,22 @@ export default function Settings() {
                       curl -X POST {import.meta.env.VITE_SUPABASE_URL}/functions/v1/lead-intake \<br />
                       &nbsp;&nbsp;-H "Content-Type: application/json" \<br />
                       &nbsp;&nbsp;-H "x-api-key: YOUR_API_KEY" \<br />
-                      &nbsp;&nbsp;-d '{`{`}<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;"name": "Patient Name",<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;"phone": "0123456789",<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;"email": "patient@example.com",<br />
-                      &nbsp;&nbsp;&nbsp;&nbsp;"consent": true<br />
+                      &nbsp;&nbsp;-d '{`{`}
+                      <br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"name": "Patient Name",
+                      <br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"phone": "0123456789",
+                      <br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"email": "patient@example.com",
+                      <br />
+                      &nbsp;&nbsp;&nbsp;&nbsp;"consent": true
+                      <br />
                       &nbsp;&nbsp;{`}`}'
                     </code>
                   </div>
 
                   <Button variant="outline" asChild>
-                    <a
-                      href="https://docs.lovable.dev"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
+                    <a href="https://docs.lovable.dev" target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
                       View API Documentation
                     </a>
@@ -725,19 +643,18 @@ export default function Settings() {
             <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription>
-                <strong className="text-yellow-900 dark:text-yellow-100">
-                  Protect Your Account
-                </strong>
+                <strong className="text-yellow-900 dark:text-yellow-100">Protect Your Account</strong>
                 <p className="mt-1 text-yellow-800 dark:text-yellow-200">
-                  Regularly review your account security settings and active sessions to ensure your data remains secure.
+                  Regularly review your account security settings and active sessions to ensure your data remains
+                  secure.
                 </p>
               </AlertDescription>
             </Alert>
 
             <PasswordChangeForm />
-            
+
             <ActiveSessionsManager />
-            
+
             <SecurityLogViewer />
           </TabsContent>
         </Tabs>
