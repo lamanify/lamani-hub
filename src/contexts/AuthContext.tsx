@@ -75,16 +75,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionLoading(true);
       console.log('[AuthContext] fetchTenantSubscription starting for tenant:', tenantId);
 
-      // Check session storage cache (3-minute duration)
+      // Check session storage cache with status-based duration
       const cacheKey = `subscription_${tenantId}`;
       const cached = sessionStorage.getItem(cacheKey);
-      const CACHE_DURATION = 3 * 60 * 1000; // 3 minutes
       
       if (cached) {
         try {
-          const { data, timestamp } = JSON.parse(cached);
-          if (Date.now() - timestamp < CACHE_DURATION) {
-            console.log('[AuthContext] Using cached subscription data');
+          const { data, timestamp, status } = JSON.parse(cached);
+          
+          // Different cache durations based on subscription status
+          let cacheDuration;
+          if (['active', 'comped'].includes(status)) {
+            cacheDuration = 24 * 60 * 60 * 1000; // 24 hours for stable statuses
+          } else if (['trial', 'trialing'].includes(status)) {
+            cacheDuration = 60 * 60 * 1000; // 1 hour for trial
+          } else if (['past_due', 'suspended'].includes(status)) {
+            cacheDuration = 5 * 60 * 1000; // 5 minutes for risky statuses
+          } else {
+            cacheDuration = 3 * 60 * 1000; // 3 minutes default
+          }
+          
+          if (Date.now() - timestamp < cacheDuration) {
+            console.log(`[AuthContext] Using cached subscription data (${status}, ${cacheDuration/1000}s TTL)`);
             setTenant(data.tenant);
             setSubscriptionConfig(data.config);
             setLastSubscriptionFetch(Date.now());
@@ -151,11 +163,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionConfig(configResult.data);
       setLastSubscriptionFetch(Date.now());
       
-      // Cache the result in session storage
+      // Cache the result in session storage with status info
       try {
         sessionStorage.setItem(cacheKey, JSON.stringify({
           data: { tenant: tenantData, config: configResult.data },
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          status: tenantData.subscription_status
         }));
       } catch (e) {
         console.warn('[AuthContext] Failed to cache subscription data:', e);
@@ -259,6 +272,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshSubscription = async () => {
+    // Clear all caches on manual refresh
+    sessionStorage.removeItem('sub_verified');
+    if (profile?.tenant_id) {
+      sessionStorage.removeItem(`subscription_${profile.tenant_id}`);
+    }
+    
     // Super admins don't have subscriptions to refresh
     if (role === 'super_admin') {
       return;
@@ -371,6 +390,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (authError) throw authError;
 
     if (authData.user) {
+      // Cache warming: Pre-fetch subscription data immediately
       await fetchProfileAndRole(authData.user.id);
       // Don't navigate here - let the Login component's useEffect handle it
       // after state is fully updated to avoid race conditions with SubscriptionGuard
