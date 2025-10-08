@@ -7,10 +7,12 @@
     <meta name="description" content="Professional lead management CRM designed for Malaysian healthcare clinics. Track leads, manage consents, and stay PDPA compliant." />
     <meta name="author" content="LamaniHub" />
     
-    <!-- Google Fonts - Poppins -->
+    <!-- Google Fonts - Poppins (deferred to prevent render-blocking) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"></noscript>
 
     <meta property="og:title" content="LamaniHub - Healthcare CRM" />
     <meta property="og:description" content="Lead Management for Malaysian Healthcare Clinics" />
