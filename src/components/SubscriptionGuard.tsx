@@ -81,27 +81,17 @@ export default function SubscriptionGuard({
 
   // If subscription is not required, skip all loading checks
   if (!requiresSubscription && !requiresSuperAdmin) {
-    if (loading && !loadingTimeout) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      );
-    }
-    if (!user) {
+    // Render immediately, redirect if not authenticated
+    if (!user && !loading) {
       return <Navigate to="/login" state={{ from: location }} replace />;
     }
     return <>{children}</>;
   }
 
-  // Show loading spinner while checking auth and subscription
-  // Skip subscription loading for pages that don't require it
+  // Render children immediately - no loading spinner
+  // Auth checks run in background and will redirect if needed
   if ((loading || (subscriptionLoading && requiresSubscription)) && !loadingTimeout) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <>{children}</>;
   }
 
   // If loading timed out, allow access with warning
