@@ -3,13 +3,10 @@ import { cn } from "@/lib/utils";
 
 export type LeadStatus =
   | "new_inquiry"
-  | "contact_attempted"
   | "contacted"
-  | "appointment_scheduled"
-  | "consultation_complete"
-  | "treatment_in_progress"
-  | "inactive"
-  | "disqualified";
+  | "qualified"
+  | "converted"
+  | "lost";
 
 interface StatusBadgeProps {
   status: LeadStatus;
@@ -31,38 +28,23 @@ const STATUS_CONFIG: Record<
     bgColor: "bg-blue-100",
     textColor: "text-blue-700",
   },
-  contact_attempted: {
-    label: "Contact Attempted",
-    bgColor: "bg-yellow-100",
-    textColor: "text-yellow-700",
-  },
   contacted: {
     label: "Contacted",
     bgColor: "bg-green-100",
     textColor: "text-green-700",
   },
-  appointment_scheduled: {
-    label: "Appointment Scheduled",
+  qualified: {
+    label: "Qualified",
     bgColor: "bg-purple-100",
     textColor: "text-purple-700",
   },
-  consultation_complete: {
-    label: "Consultation Complete",
-    bgColor: "bg-indigo-100",
-    textColor: "text-indigo-700",
+  converted: {
+    label: "Converted",
+    bgColor: "bg-emerald-100",
+    textColor: "text-emerald-700",
   },
-  treatment_in_progress: {
-    label: "Treatment In Progress",
-    bgColor: "bg-pink-100",
-    textColor: "text-pink-700",
-  },
-  inactive: {
-    label: "Inactive",
-    bgColor: "bg-gray-100",
-    textColor: "text-gray-700",
-  },
-  disqualified: {
-    label: "Disqualified",
+  lost: {
+    label: "Lost",
     bgColor: "bg-red-100",
     textColor: "text-red-700",
   },

@@ -83,13 +83,10 @@ interface AuditLog {
 // Valid lead statuses - must match your database enum
 const VALID_LEAD_STATUSES = [
   'new_inquiry',
-  'contact_attempted', 
   'contacted',
-  'appointment_scheduled',
-  'consultation_complete',
-  'treatment_in_progress',
-  'inactive',
-  'disqualified'
+  'qualified',
+  'converted',
+  'lost'
 ] as const;
 
 const actionIcons: Record<string, any> = {
@@ -268,7 +265,7 @@ export default function LeadDetail() {
       const { data, error } = await supabase
         .from("leads")
         .update({
-          status: newStatus,
+          status: newStatus as LeadStatus,
           modified_by: user?.id,
           updated_at: new Date().toISOString(),
         })
@@ -677,7 +674,8 @@ export default function LeadDetail() {
                 })}
               </div>
             </CardContent>
-        </Card>
+          </Card>
+        )}
       </div>
 
       {/* Edit Modal */}
