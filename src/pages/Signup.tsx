@@ -190,15 +190,42 @@ export default function Signup() {
         toast.success("Account created successfully! Welcome to LamaniHub.");
         navigate("/onboarding");
       } catch (edgeError: any) {
-        console.log("Edge function signup failed:", edgeError);
+        console.log("Edge function error:", edgeError.message);
 
-        // Fallback if network/timeout
+        // If timeout, the signup might have actually succeeded - try to login to verify
         if (
           edgeError.message === "Request timeout" ||
-          edgeError.message.toLowerCase().includes("timeout") ||
+          edgeError.message.toLowerCase().includes("timeout")
+        ) {
+          console.log("Edge function timeout - attempting login to verify signup status");
+          try {
+            const { error: loginError } = await supabase.auth.signInWithPassword({
+              email: data.email.trim(),
+              password: data.password,
+            });
+
+            if (!loginError) {
+              // Login succeeded - signup was successful!
+              console.log("Login successful - signup completed despite timeout");
+              toast.success("Account created successfully! Welcome to LamaniHub.");
+              navigate("/onboarding");
+              return;
+            } else {
+              console.log("Login failed after timeout:", loginError.message);
+              throw new Error("Signup status unclear. Please try logging in or contact support.");
+            }
+          } catch (loginAttemptError: any) {
+            console.error("Login verification failed:", loginAttemptError);
+            throw new Error("Signup status unclear. Please try logging in or contact support.");
+          }
+        }
+
+        // For true network failures, use fallback
+        if (
           edgeError.message.toLowerCase().includes("network") ||
           edgeError.message.includes("Failed to fetch")
         ) {
+          console.log("Network error - using fallback signup");
           await withTimeout(fallbackSignup(data), 20000);
           toast.success("Account created successfully! Welcome to LamaniHub.");
           navigate("/onboarding");
