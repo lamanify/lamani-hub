@@ -9,8 +9,8 @@ interface ProtectedRouteProps {
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
 
-  // Redirect if not authenticated (only after loading completes)
-  if (!loading && !user) {
+  // Redirect immediately if not authenticated (don't wait for loading to complete)
+  if (!user && !loading) {
     return <Navigate to="/login" replace />;
   }
 

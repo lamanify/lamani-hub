@@ -397,12 +397,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setTenant(null);
-    setRole(null);
-    setSubscriptionConfig(null);
-    navigate('/login');
+    try {
+      console.log('[AuthContext] Logout initiated');
+      
+      // Clear all caches
+      sessionStorage.clear();
+      
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear all state
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      setTenant(null);
+      setRole(null);
+      setSubscriptionConfig(null);
+      setLoading(false);
+      setSubscriptionLoading(false);
+      
+      console.log('[AuthContext] Logout completed');
+      
+      // Navigate to login
+      navigate('/login', { replace: true });
+    } catch (error) {
+      console.error('[AuthContext] Logout error:', error);
+      // Even if there's an error, navigate to login
+      navigate('/login', { replace: true });
+    }
   };
 
   const resetPassword = async (email: string) => {

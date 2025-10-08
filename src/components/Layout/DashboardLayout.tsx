@@ -154,7 +154,11 @@ const SidebarContent = () => {
         <Button
           variant="outline"
           className="w-full justify-start gap-3"
-          onClick={logout}
+          onClick={async (e) => {
+            e.preventDefault();
+            console.log('[DashboardLayout] Logout button clicked');
+            await logout();
+          }}
         >
           <LogOut className="h-4 w-4" />
           <span>Logout</span>
