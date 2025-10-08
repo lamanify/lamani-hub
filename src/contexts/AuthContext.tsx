@@ -75,16 +75,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionLoading(true);
       console.log('[AuthContext] fetchTenantSubscription starting for tenant:', tenantId);
 
+      // Check session storage cache (3-minute duration)
+      const cacheKey = `subscription_${tenantId}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      const CACHE_DURATION = 3 * 60 * 1000; // 3 minutes
+      
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < CACHE_DURATION) {
+            console.log('[AuthContext] Using cached subscription data');
+            setTenant(data.tenant);
+            setSubscriptionConfig(data.config);
+            setLastSubscriptionFetch(Date.now());
+            setSubscriptionLoading(false);
+            return; // Use cached data
+          }
+        } catch (e) {
+          console.warn('[AuthContext] Failed to parse cached subscription:', e);
+        }
+      }
+
       // Determine if user is admin
       const isAdminUser = userRole === 'super_admin' || userRole === 'clinic_admin';
       console.log('[AuthContext] User is admin:', isAdminUser);
 
-      // Create timeout promise - 3 seconds for faster response
+      // Create timeout promise - 1.5 seconds for faster response
       const createTimeout = (name: string) => new Promise((_, reject) => 
         setTimeout(() => {
-          console.error(`[AuthContext] ${name} query TIMEOUT after 3 seconds`);
+          console.error(`[AuthContext] ${name} query TIMEOUT after 1.5 seconds`);
           reject(new Error(`${name} query timeout`));
-        }, 3000)
+        }, 1500)
       );
 
       let tenantData;
@@ -129,6 +150,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTenant(tenantData);
       setSubscriptionConfig(configResult.data);
       setLastSubscriptionFetch(Date.now());
+      
+      // Cache the result in session storage
+      try {
+        sessionStorage.setItem(cacheKey, JSON.stringify({
+          data: { tenant: tenantData, config: configResult.data },
+          timestamp: Date.now()
+        }));
+      } catch (e) {
+        console.warn('[AuthContext] Failed to cache subscription data:', e);
+      }
+      
       console.log('[AuthContext] fetchTenantSubscription completed successfully');
     } catch (error) {
       console.error('[AuthContext] Error fetching subscription:', error);
@@ -175,9 +207,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const createTimeout = (name: string) => new Promise((_, reject) => 
         setTimeout(() => {
-          console.error(`[AuthContext] ${name} query TIMEOUT after 3 seconds`);
+          console.error(`[AuthContext] ${name} query TIMEOUT after 1.5 seconds`);
           reject(new Error(`${name} query timeout`));
-        }, 3000)
+        }, 1500)
       );
 
       // Run both queries in parallel
@@ -270,23 +302,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (Date.now() - lastSubscriptionFetch > fiveMinutes) {
         fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
       }
-    }, 60000); // Check every minute
+    }, 5 * 60 * 1000); // Check every 5 minutes
 
     return () => clearInterval(interval);
   }, [lastSubscriptionFetch, profile?.tenant_id, tenant?.plan_type, role]);
 
-  // Refresh subscription on route change
-  useEffect(() => {
-    // Super admins don't need subscription refresh on route changes
-    if (role === 'super_admin' || !profile?.tenant_id || !tenant?.plan_type) {
-      return;
-    }
-
-    const threeMinutes = 3 * 60 * 1000;
-    if (Date.now() - lastSubscriptionFetch > threeMinutes) {
-      fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
-    }
-  }, [location.pathname, role, profile?.tenant_id, tenant?.plan_type, lastSubscriptionFetch]);
+  // Route-based refresh removed for performance - rely on 5-minute timer and manual refresh instead
 
   useEffect(() => {
     // Check for existing session
