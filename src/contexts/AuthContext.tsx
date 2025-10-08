@@ -265,6 +265,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('[AuthContext] fetchProfileAndRole failed:', error);
       setSubscriptionLoading(false);
+      setLoading(false); // Ensure loading state is cleared on error
       throw error; // Re-throw to let caller handle it
     } finally {
       fetchingProfileRef.current = null; // Always clear the flag
@@ -361,11 +362,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSubscriptionConfig(null);
             setSubscriptionLoading(false);
           } finally {
-            // Always set loading to false, even if fetching fails
-            setTimeout(() => {
-              console.log('[AuthContext] Setting loading to false');
-              setLoading(false);
-            }, 0);
+            // Always set loading to false immediately - no setTimeout to prevent race conditions
+            console.log('[AuthContext] Setting loading to false');
+            setLoading(false);
           }
         } else {
           setProfile(null);
