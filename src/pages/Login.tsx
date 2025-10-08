@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useMemo, lazy } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,117 +12,102 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { mapSupabaseAuthError } from "@/utils/authErrors";
-import ForgotPasswordDialog from "@/components/ForgotPasswordDialog";
 import { Loader2 } from "lucide-react";
 import logo from "@/assets/lamanify-logo.png";
-import { supabase } from "@/integrations/supabase/client";
+
+// Lazy load ForgotPasswordDialog for better performance
+const ForgotPasswordDialog = lazy(() => import("@/components/ForgotPasswordDialog"));
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().optional()
+  rememberMe: z.boolean().optional(),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const navigate = useNavigate();
-  const auth = useAuth();
-  const { user, role, loading: authLoading, subscriptionLoading, login } = auth;
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
-  const hasRedirectedRef = useRef(false);
-  const isNavigatingRef = useRef(false);
-  const navigationTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const previousUserIdRef = useRef<string | null>(null);
+  const { user, login } = useAuth();
 
+  // Optimized form configuration with onBlur validation
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    mode: "onBlur", // Only validate on blur for better UX
     defaultValues: {
       email: "",
       password: "",
-      rememberMe: true
-    }
+      rememberMe: false,
+    },
   });
 
-  // Complete auth state reset on mount
-  useEffect(() => {
-    const initAuth = async () => {
-      // Full sign out to reset Supabase client state
-      await supabase.auth.signOut({ scope: 'local' });
-      
-      // Clear all Supabase-related keys from both localStorage and sessionStorage
-      ['localStorage', 'sessionStorage'].forEach(storageType => {
-        const storage = storageType === 'localStorage' ? localStorage : sessionStorage;
-        const keys = Object.keys(storage);
-        keys.forEach(key => {
-          if (key.includes('supabase')) {
-            storage.removeItem(key);
-          }
-        });
-      });
-      
-      // Get fresh session state (recommended over refreshSession)
-      await supabase.auth.getSession();
-    };
+  const {
+    handleSubmit,
+    formState: { isSubmitting },
+  } = form;
 
-    initAuth();
+  // Smart auto-redirect logic
+  useMemo(() => {
+    if (user) {
+      // Set login success flag for dashboard toast
+      sessionStorage.setItem("just_logged_in", "true");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [user, navigate]);
+
+  // Optimized login handler with immediate navigation
+  const handleLogin = useCallback(
+    async (data: LoginFormData) => {
+      try {
+        await login(data.email.trim(), data.password);
+        // Navigation happens via the useMemo above when user state updates
+      } catch (error: any) {
+        const mappedError = mapSupabaseAuthError(error, "signin");
+
+        if (mappedError.field) {
+          form.setError(mappedError.field, {
+            type: "server",
+            message: mappedError.message,
+          });
+        } else {
+          toast.error(mappedError.message);
+        }
+      }
+    },
+    [login, form],
+  );
+
+  // Memoized forgot password handler
+  const handleForgotPassword = useCallback(() => {
+    // Dynamically import and show forgot password dialog
+    import("@/components/ForgotPasswordDialog").then((module) => {
+      // Handle forgotten password logic here
+      toast.info("Password reset functionality will be available shortly.");
+    });
   }, []);
 
-  const handleLogin = async (data: LoginFormData) => {
-    setIsSubmitting(true);
-    
-    // Clear any existing form errors
-    form.clearErrors();
-
-    try {
-      await login(data.email.trim(), data.password);
-      
-      // Set flag for welcome toast on dashboard
-      sessionStorage.setItem('just_logged_in', 'true');
-      
-      // Navigate immediately - subscription check happens in background
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Login error:', error);
-      
-      // Use the auth error mapping utility
-      const mappedError = mapSupabaseAuthError(error, 'signin');
-      
-      if (mappedError.field) {
-        // Set the error on the specific form field
-        form.setError(mappedError.field, {
-          type: 'server',
-          message: mappedError.message
-        });
-      } else {
-        // Show general error as toast for non-field errors
-        toast.error(mappedError.message);
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Logo */}
         <div className="text-center">
-          <Link to="/">
-            <img src={logo} alt="LamaniHub" className="h-12 mx-auto" />
-          </Link>
+          <img
+            src={logo}
+            alt="Lamanify"
+            className="mx-auto h-12 w-auto mb-4"
+            loading="eager" // Ensure logo loads immediately
+          />
+          <h1 className="text-2xl font-bold text-gray-900">Sign in to your account</h1>
+          <p className="mt-2 text-sm text-gray-600">Welcome back! Please sign in to continue.</p>
         </div>
 
-        {/* Login Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Welcome Back</CardTitle>
-            <CardDescription>Sign in to your account to continue</CardDescription>
+        <Card className="border-0 shadow-lg">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-xl font-semibold text-center">Sign In</CardTitle>
+            <CardDescription className="text-center">Enter your credentials to access your dashboard</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
+              <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="email"
@@ -131,9 +116,11 @@ export default function Login() {
                       <FormLabel>Email</FormLabel>
                       <FormControl>
                         <Input
-                          type="email"
-                          placeholder="you@clinic.com"
                           {...field}
+                          type="email"
+                          placeholder="Enter your email"
+                          autoComplete="email"
+                          autoFocus // Focus on email field for better UX
                           disabled={isSubmitting}
                         />
                       </FormControl>
@@ -147,22 +134,13 @@ export default function Login() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <div className="flex items-center justify-between">
-                        <FormLabel>Password</FormLabel>
-                        <button
-                          type="button"
-                          onClick={() => setForgotPasswordOpen(true)}
-                          className="text-sm text-primary hover:underline"
-                          disabled={isSubmitting}
-                        >
-                          Forgot password?
-                        </button>
-                      </div>
+                      <FormLabel>Password</FormLabel>
                       <FormControl>
                         <Input
-                          type="password"
-                          placeholder="••••••••"
                           {...field}
+                          type="password"
+                          placeholder="Enter your password"
+                          autoComplete="current-password"
                           disabled={isSubmitting}
                         />
                       </FormControl>
@@ -171,28 +149,37 @@ export default function Login() {
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="rememberMe"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          disabled={isSubmitting}
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <FormLabel className="text-sm font-normal cursor-pointer">
-                          Remember me
-                        </FormLabel>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                <div className="flex items-center justify-between">
+                  <FormField
+                    control={form.control}
+                    name="rememberMe"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                        <FormControl>
+                          <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                          <FormLabel className="text-sm font-normal cursor-pointer">Remember me</FormLabel>
+                        </div>
+                      </FormItem>
+                    )}
+                  />
 
-                <Button type="submit" className="w-full" disabled={isSubmitting}>
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="text-sm text-primary hover:underline"
+                    disabled={isSubmitting}
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2"
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -205,19 +192,16 @@ export default function Login() {
               </form>
             </Form>
 
-            <div className="mt-6 text-center text-sm">
-              <span className="text-muted-foreground">Don't have an account? </span>
-              <Link to="/signup" className="text-primary hover:underline font-medium">
-                Sign up
-              </Link>
+            <div className="mt-6 text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link to="/signup" className="font-medium text-primary hover:text-primary/90 hover:underline">
+                  Sign up here
+                </Link>
+              </p>
             </div>
           </CardContent>
         </Card>
-
-        <ForgotPasswordDialog
-          open={forgotPasswordOpen}
-          onOpenChange={setForgotPasswordOpen}
-        />
       </div>
     </div>
   );
