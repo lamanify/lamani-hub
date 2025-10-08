@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
-import { 
-  Plus, 
-  Search, 
-  Eye, 
-  Pencil, 
-  Trash, 
-  Users, 
-  Copy, 
+import {
+  Plus,
+  Search,
+  Eye,
+  Pencil,
+  Trash,
+  Users,
+  Copy,
   MoreVertical,
   FileText,
   Globe,
@@ -20,21 +20,8 @@ import {
 import { DashboardLayout } from "@/components/Layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,11 +38,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, type LeadStatus } from "@/components/StatusBadge";
 import { ColumnPicker } from "@/components/ColumnPicker";
@@ -145,10 +128,7 @@ export default function Leads() {
   const { data: leads, isLoading } = useQuery({
     queryKey: ["leads", debouncedSearch, statusFilter, sourceFilter, sortColumn, sortDirection],
     queryFn: async () => {
-      let query = supabase
-        .from("leads")
-        .select("*")
-        .limit(50);
+      let query = supabase.from("leads").select("*").limit(50);
 
       // Apply sorting
       if (sortColumn.startsWith("custom->")) {
@@ -162,9 +142,7 @@ export default function Leads() {
 
       if (debouncedSearch) {
         const searchPattern = `%${debouncedSearch}%`;
-        query = query.or(
-          `name.ilike.${searchPattern},phone.ilike.${searchPattern},email.ilike.${searchPattern}`
-        );
+        query = query.or(`name.ilike.${searchPattern},phone.ilike.${searchPattern},email.ilike.${searchPattern}`);
       }
 
       if (statusFilter !== "all") {
@@ -249,7 +227,9 @@ export default function Leads() {
     try {
       setIsExporting(true);
 
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
       if (!session) {
         toast({
@@ -260,7 +240,7 @@ export default function Leads() {
         return;
       }
 
-      const response = await supabase.functions.invoke('export-leads', {
+      const response = await supabase.functions.invoke("export-leads", {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -272,13 +252,13 @@ export default function Leads() {
 
       // Convert the response data to a Blob
       const csvContent = response.data;
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+
       // Create download link
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `leads_export_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `leads_export_${new Date().toISOString().split("T")[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -289,12 +269,10 @@ export default function Leads() {
         description: `Successfully exported ${leads?.length || 0} leads to CSV`,
       });
     } catch (error) {
-      console.error('Export error:', error);
-      
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : "Failed to export leads. Please try again.";
-      
+      console.error("Export error:", error);
+
+      const errorMessage = error instanceof Error ? error.message : "Failed to export leads. Please try again.";
+
       toast({
         title: "Export failed",
         description: errorMessage,
@@ -341,9 +319,7 @@ export default function Leads() {
   const allColumns = [...coreColumns, ...customColumns];
 
   // Visible custom columns (based on user selection)
-  const visibleCustomColumns = customColumns.filter((col) =>
-    selectedCustomColumns.includes(col.key)
-  );
+  const visibleCustomColumns = customColumns.filter((col) => selectedCustomColumns.includes(col.key));
 
   return (
     <DashboardLayout>
@@ -352,9 +328,7 @@ export default function Leads() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">Leads</h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your clinic's patient inquiries
-            </p>
+            <p className="text-muted-foreground mt-1">Manage your clinic's patient inquiries</p>
           </div>
           <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <ImportLeadsModal />
@@ -366,7 +340,7 @@ export default function Leads() {
               className="min-h-[44px] flex-1 sm:flex-initial"
             >
               <Download className="h-4 w-4 mr-2" />
-              {isExporting ? 'Exporting...' : 'Export'}
+              {isExporting ? "Exporting..." : "Export"}
             </Button>
             <CreateLeadModal />
           </div>
@@ -430,18 +404,14 @@ export default function Leads() {
         {/* Mobile Card View (< md) */}
         <div className="md:hidden space-y-3">
           {isLoading ? (
-            [...Array(5)].map((_, i) => (
-              <Skeleton key={i} className="h-32 w-full" />
-            ))
+            [...Array(5)].map((_, i) => <Skeleton key={i} className="h-32 w-full" />)
           ) : showEmpty ? (
             <div className="flex flex-col items-center justify-center py-16 px-4 bg-white border rounded-lg">
               {hasFilters ? (
                 <>
                   <Search className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No leads found</h3>
-                  <p className="text-muted-foreground text-center mb-6">
-                    Try adjusting your search or filters
-                  </p>
+                  <p className="text-muted-foreground text-center mb-6">Try adjusting your search or filters</p>
                   <Button variant="outline" onClick={clearFilters} className="min-h-[44px]">
                     Clear Filters
                   </Button>
@@ -466,12 +436,7 @@ export default function Leads() {
             </div>
           ) : (
             leads?.map((lead) => (
-              <LeadCard
-                key={lead.id}
-                lead={lead}
-                onView={(id) => navigate(`/leads/${id}`)}
-                onDelete={handleDelete}
-              />
+              <LeadCard key={lead.id} lead={lead} onView={(id) => navigate(`/leads/${id}`)} onDelete={handleDelete} />
             ))
           )}
         </div>
@@ -495,9 +460,7 @@ export default function Leads() {
                 <>
                   <Search className="h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-semibold mb-2">No leads found</h3>
-                  <p className="text-muted-foreground text-center mb-6">
-                    Try adjusting your search or filters
-                  </p>
+                  <p className="text-muted-foreground text-center mb-6">Try adjusting your search or filters</p>
                   <Button variant="outline" onClick={clearFilters}>
                     Clear Filters
                   </Button>
@@ -542,7 +505,7 @@ export default function Leads() {
                       <TableHead className="min-w-[220px]">Email</TableHead>
                       <TableHead className="min-w-[140px]">Status</TableHead>
                       <TableHead className="min-w-[120px]">Source</TableHead>
-                      
+
                       {/* Dynamic custom columns - each with proper min width */}
                       {visibleCustomColumns.map((col) => (
                         <TableHead key={col.key} className="min-w-[150px]">
@@ -557,7 +520,7 @@ export default function Leads() {
                           </Button>
                         </TableHead>
                       ))}
-                      
+
                       <TableHead className="min-w-[140px]">
                         <Button
                           variant="ghost"
@@ -587,7 +550,7 @@ export default function Leads() {
                           <TableCell className="font-semibold sticky left-0 bg-background z-10 border-r">
                             <div className="truncate pr-2">{lead.name}</div>
                           </TableCell>
-                          
+
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <span className="text-sm whitespace-nowrap">{formatPhone(lead.phone)}</span>
@@ -612,14 +575,12 @@ export default function Leads() {
                               </div>
                             </div>
                           </TableCell>
-                          
+
                           <TableCell>
                             {lead.email ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="text-sm truncate max-w-[200px]">
-                                    {lead.email}
-                                  </div>
+                                  <div className="text-sm truncate max-w-[200px]">{lead.email}</div>
                                 </TooltipTrigger>
                                 <TooltipContent>{lead.email}</TooltipContent>
                               </Tooltip>
@@ -627,28 +588,25 @@ export default function Leads() {
                               <span className="text-muted-foreground text-sm">—</span>
                             )}
                           </TableCell>
-                          
+
                           <TableCell onClick={(e) => e.stopPropagation()}>
                             <StatusBadge status={lead.status} />
                           </TableCell>
-                          
+
                           <TableCell>
                             <div className="flex items-center gap-2">
                               <SourceIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                               <span className="text-sm capitalize whitespace-nowrap">{lead.source || "Manual"}</span>
                             </div>
                           </TableCell>
-                          
+
                           {/* Dynamic custom field columns */}
                           {visibleCustomColumns.map((col) => (
                             <TableCell key={col.key}>
-                              <CustomFieldCell
-                                value={lead.custom?.[col.key]}
-                                dataType={col.dataType}
-                              />
+                              <CustomFieldCell value={lead.custom?.[col.key]} dataType={col.dataType} />
                             </TableCell>
                           ))}
-                          
+
                           <TableCell>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -658,14 +616,15 @@ export default function Leads() {
                                   })}
                                 </span>
                               </TooltipTrigger>
-                              <TooltipContent>
-                                {new Date(lead.created_at).toLocaleString()}
-                              </TooltipContent>
+                              <TooltipContent>{new Date(lead.created_at).toLocaleString()}</TooltipContent>
                             </Tooltip>
                           </TableCell>
-                          
+
                           {/* Sticky Actions column */}
-                          <TableCell className="text-right sticky right-0 bg-background z-10 border-l" onClick={(e) => e.stopPropagation()}>
+                          <TableCell
+                            className="text-right sticky right-0 bg-background z-10 border-l"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -681,10 +640,7 @@ export default function Leads() {
                                   <Pencil className="mr-2 h-4 w-4" />
                                   Edit
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => handleDelete(lead)}
-                                >
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(lead)}>
                                   <Trash className="mr-2 h-4 w-4" />
                                   Delete
                                 </DropdownMenuItem>
@@ -708,8 +664,7 @@ export default function Leads() {
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete {leadToDelete?.name}? This action cannot be
-              undone.
+              Are you sure you want to delete {leadToDelete?.name}? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
