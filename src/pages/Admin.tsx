@@ -37,7 +37,7 @@ interface Tenant {
 export default function Admin() {
   const queryClient = useQueryClient();
 
-  // Fetch all tenants
+  // Fetch all tenants (real-time data - no caching)
   const { data: tenants, isLoading } = useQuery({
     queryKey: ['admin-tenants'],
     queryFn: async () => {
@@ -48,7 +48,10 @@ export default function Admin() {
 
       if (error) throw error;
       return data as Tenant[];
-    }
+    },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Update subscription status mutation

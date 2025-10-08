@@ -93,7 +93,7 @@ export default function AuditLog() {
     enabled: !!user?.id,
   });
 
-  // Fetch audit logs
+  // Fetch audit logs (real-time data - no caching)
   const { data: logs, isLoading } = useQuery({
     queryKey: ["audit_log", profile?.tenant_id, debouncedSearch, actionFilter, dateFilter],
     queryFn: async () => {
@@ -143,6 +143,9 @@ export default function AuditLog() {
       return auditData?.map(log => ({ ...log, user_name: "System" }));
     },
     enabled: !!profile?.tenant_id,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
     retry: 2,
   });
 

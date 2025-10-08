@@ -103,7 +103,7 @@ export default function FieldsManager() {
 
   const isAdmin = role === "clinic_admin" || role === "super_admin";
 
-  // Fetch properties
+  // Fetch properties (real-time data - no caching)
   const { data: properties, isLoading } = useQuery({
     queryKey: ["properties", profile?.tenant_id],
     queryFn: async () => {
@@ -117,6 +117,9 @@ export default function FieldsManager() {
       return data as PropertyDefinition[];
     },
     enabled: !!profile?.tenant_id,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Toggle mutations
