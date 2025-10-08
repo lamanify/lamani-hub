@@ -29,8 +29,9 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 2,
-      staleTime: 30000,
-      refetchOnWindowFocus: false,
+      staleTime: 0,
+      gcTime: 0,
+      refetchOnWindowFocus: true,
     },
     mutations: {
       retry: 1,

@@ -55,7 +55,7 @@ export default function Dashboard() {
     enabled: !!user?.id,
   });
 
-  // Fetch leads count
+  // Fetch leads count (real-time data - no caching)
   const { data: leadsCount } = useQuery({
     queryKey: ["leads_count", profile?.tenant_id],
     queryFn: async () => {
@@ -67,9 +67,12 @@ export default function Dashboard() {
       return count || 0;
     },
     enabled: !!profile?.tenant_id,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
-  // Fetch recent audit logs
+  // Fetch recent audit logs (real-time data - no caching)
   const { data: recentActivity, isLoading: activityLoading } = useQuery({
     queryKey: ["recent_activity", profile?.tenant_id],
     queryFn: async () => {
@@ -100,6 +103,9 @@ export default function Dashboard() {
       return auditData?.map(log => ({ ...log, user_name: "System" }));
     },
     enabled: !!profile?.tenant_id,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const stats = [

@@ -124,7 +124,7 @@ export default function LeadDetail() {
     enabled: !!profile?.tenant_id,
   });
 
-  // Fetch lead details
+  // Fetch lead details (real-time data - no caching)
   const { data: lead, isLoading } = useQuery({
     queryKey: ["lead", id],
     queryFn: async () => {
@@ -162,9 +162,12 @@ export default function LeadDetail() {
       return { ...data, creator, modifier } as Lead;
     },
     enabled: !!id,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
-  // Fetch audit logs
+  // Fetch audit logs (real-time data - no caching)
   const { data: auditLogs } = useQuery({
     queryKey: ["audit", id],
     queryFn: async () => {
@@ -194,6 +197,9 @@ export default function LeadDetail() {
       return logsWithProfiles as AuditLog[];
     },
     enabled: !!id,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Delete mutation

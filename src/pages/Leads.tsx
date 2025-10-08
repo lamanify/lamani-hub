@@ -141,7 +141,7 @@ export default function Leads() {
     enabled: !!tenant?.id,
   });
 
-  // Fetch leads with filters
+  // Fetch leads with filters (real-time data - no caching)
   const { data: leads, isLoading } = useQuery({
     queryKey: ["leads", debouncedSearch, statusFilter, sourceFilter, sortColumn, sortDirection],
     queryFn: async () => {
@@ -180,6 +180,9 @@ export default function Leads() {
       if (error) throw error;
       return data as Lead[];
     },
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   // Delete lead mutation
