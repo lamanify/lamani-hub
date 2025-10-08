@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 const ACTION_LABELS: Record<string, string> = {
   lead_create: "Lead Created",
@@ -39,6 +41,15 @@ const ACTION_COLORS: Record<string, string> = {
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  // Show welcome toast after login
+  useEffect(() => {
+    const justLoggedIn = sessionStorage.getItem('just_logged_in');
+    if (justLoggedIn === 'true') {
+      sessionStorage.removeItem('just_logged_in');
+      toast.success("Welcome back!");
+    }
+  }, []);
 
   // Fetch user's profile to get tenant_id
   const { data: profile } = useQuery({

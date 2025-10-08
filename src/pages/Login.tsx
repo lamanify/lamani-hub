@@ -67,94 +67,6 @@ export default function Login() {
     };
 
     initAuth();
-    
-    // Reset redirect flag on unmount
-    return () => {
-      hasRedirectedRef.current = false;
-    };
-  }, []);
-
-  // Navigation guard with enhanced stability check and logging
-  useEffect(() => {
-    console.log("[Login Navigation Guard]", {
-      authLoading,
-      subscriptionLoading,
-      userId: user?.id,
-      role,
-      hasRedirected: hasRedirectedRef.current,
-      isNavigating: isNavigatingRef.current,
-      previousUserId: previousUserIdRef.current,
-      timestamp: new Date().toISOString()
-    });
-
-    // Clear any existing navigation timer
-    if (navigationTimerRef.current) {
-      clearTimeout(navigationTimerRef.current);
-      navigationTimerRef.current = null;
-    }
-
-    // Early returns
-    if (hasRedirectedRef.current || isNavigatingRef.current) {
-      return;
-    }
-
-    // Timeout safety net: if user exists but auth is stuck loading, force navigation after 5 seconds
-    if (user?.id && (authLoading || subscriptionLoading)) {
-      console.log('[Login] Auth/subscription loading with user present, setting 5s timeout');
-      navigationTimerRef.current = setTimeout(() => {
-        console.log('[Login] Timeout reached - forcing navigation despite loading states');
-        hasRedirectedRef.current = true;
-        navigate("/dashboard");
-      }, 5000);
-      return;
-    }
-
-    // Early return conditions - navigate immediately once user and role are available
-    if (authLoading || !user || !role) {
-      return;
-    }
-
-    // Check for user ID stability (same user for consecutive renders)
-    const currentUserId = user.id;
-    if (previousUserIdRef.current !== currentUserId) {
-      console.log("[Login] User ID changed, waiting for stability", {
-        previous: previousUserIdRef.current,
-        current: currentUserId
-      });
-      previousUserIdRef.current = currentUserId;
-      return;
-    }
-
-    // User is stable, proceed with navigation after delay
-    console.log("[Login] Auth stable, scheduling navigation");
-    isNavigatingRef.current = true;
-    
-    navigationTimerRef.current = setTimeout(() => {
-      console.log("[Login] Executing navigation to /dashboard");
-      hasRedirectedRef.current = true;
-      navigate("/dashboard");
-    }, 300);
-
-    // Cleanup
-    return () => {
-      if (navigationTimerRef.current) {
-        console.log("[Login] Cleanup: clearing navigation timer");
-        clearTimeout(navigationTimerRef.current);
-        navigationTimerRef.current = null;
-      }
-    };
-  }, [user, authLoading, role, navigate]);
-
-  // Reset refs on unmount
-  useEffect(() => {
-    return () => {
-      hasRedirectedRef.current = false;
-      isNavigatingRef.current = false;
-      previousUserIdRef.current = null;
-      if (navigationTimerRef.current) {
-        clearTimeout(navigationTimerRef.current);
-      }
-    };
   }, []);
 
   const handleLogin = async (data: LoginFormData) => {
@@ -165,8 +77,12 @@ export default function Login() {
 
     try {
       await login(data.email.trim(), data.password);
-      toast.success("Login successful!");
-      // Navigation is handled by the AuthContext after successful login
+      
+      // Set flag for welcome toast on dashboard
+      sessionStorage.setItem('just_logged_in', 'true');
+      
+      // Navigate immediately - subscription check happens in background
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
       

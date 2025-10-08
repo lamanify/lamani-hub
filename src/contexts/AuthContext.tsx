@@ -389,10 +389,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (authError) throw authError;
 
     if (authData.user) {
-      // Cache warming: Pre-fetch subscription data immediately
-      await fetchProfileAndRole(authData.user.id);
-      // Don't navigate here - let the Login component's useEffect handle it
-      // after state is fully updated to avoid race conditions with SubscriptionGuard
+      // Non-blocking: Start fetching profile/subscription in background
+      fetchProfileAndRole(authData.user.id).catch(err => {
+        console.error('[AuthContext] Background profile fetch failed:', err);
+      });
+      // Login component navigates immediately - SubscriptionGuard handles loading states
     }
   };
 
