@@ -277,44 +277,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("[AuthContext] Current session:", session?.user?.id);
 
       // Fetch role and profile in parallel with 10s timeout for each
-      console.log("[AuthContext] Fetching role and profile in parallel...");
+      console.log("[AuthContext] Fetching profile with role in single query...");
 
-      const rolePromise = supabase.from("user_roles").select("role").eq("user_id", userId).single();
-
-      const profilePromise = supabase
-        .from("profiles")
-        .select("user_id, tenant_id, full_name")
-        .eq("user_id", userId)
-        .single();
-
-      const createTimeout = (name: string) =>
-        new Promise((_, reject) =>
-          setTimeout(() => {
-            console.error(`[AuthContext] ${name} query TIMEOUT after 10 seconds`);
-            reject(new Error(`${name} query timeout`));
-          }, 10000),
-        );
-
-      // Run both queries in parallel
-      const [roleResult, profileResult] = await Promise.all([
-        Promise.race([rolePromise, createTimeout("Role")]),
-        Promise.race([profilePromise, createTimeout("Profile")]),
-      ]);
-
-      const { data: roleData, error: roleError } = roleResult as any;
-      const { data: profileData, error: profileError } = profileResult as any;
-
-      if (roleError) {
-        console.error("[AuthContext] Error fetching role:", roleError);
-        throw roleError;
+      // Check localStorage cache first
+      const cachedRole = localStorage.getItem(`user_role_${userId}`);
+      if (cachedRole) {
+        console.log("[AuthContext] Using cached role:", cachedRole);
       }
 
-      if (profileError) {
-        console.error("[AuthContext] Error fetching profile:", profileError);
-        throw profileError;
+      // Single JOIN query with exponential backoff retry
+      let attempt = 0;
+      const maxAttempts = 3;
+      const delays = [0, 2000, 4000]; // 0s, 2s, 4s
+
+      let profileData: any = null;
+      let roleData: any = null;
+
+      while (attempt < maxAttempts) {
+        try {
+          if (attempt > 0) {
+            console.log(`[AuthContext] Retry attempt ${attempt + 1}/${maxAttempts} after ${delays[attempt]}ms`);
+            await new Promise(resolve => setTimeout(resolve, delays[attempt]));
+          }
+
+          // Fetch profile and role in single query using JOIN
+          const { data: profile, error: profileError } = await supabase
+            .from("profiles")
+            .select(`
+              user_id,
+              tenant_id,
+              full_name,
+              user_roles (role)
+            `)
+            .eq("user_id", userId)
+            .single();
+
+          if (profileError) throw profileError;
+
+          profileData = {
+            user_id: profile.user_id,
+            tenant_id: profile.tenant_id,
+            full_name: profile.full_name,
+          };
+
+          const userRole = (profile as any).user_roles?.[0]?.role || cachedRole || 'clinic_user';
+          roleData = { role: userRole };
+
+          // Cache role in localStorage
+          localStorage.setItem(`user_role_${userId}`, userRole);
+
+          console.log("[AuthContext] Profile and role fetched successfully:", { role: roleData.role, profile: profileData });
+          break;
+        } catch (error) {
+          attempt++;
+          console.error(`[AuthContext] Fetch attempt ${attempt} failed:`, error);
+
+          if (attempt >= maxAttempts) {
+            // Final fallback: use cached role or assume clinic_user
+            if (cachedRole) {
+              console.warn("[AuthContext] All attempts failed, using cached role:", cachedRole);
+              roleData = { role: cachedRole };
+              // Still need profile data - this is critical
+              throw new Error("Failed to fetch profile after all retries");
+            } else {
+              console.error("[AuthContext] All attempts failed with no cache available");
+              throw error;
+            }
+          }
+        }
       }
 
-      console.log("[AuthContext] Role and profile fetched:", { role: roleData?.role, profile: profileData });
       setRole(roleData.role);
       setProfile(profileData);
 

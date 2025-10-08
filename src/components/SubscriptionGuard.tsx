@@ -87,26 +87,53 @@ export default function SubscriptionGuard({
     return <>{children}</>;
   }
 
-  // Render children immediately - no loading spinner
-  // Auth checks run in background and will redirect if needed
+  // Show loading skeleton while authentication is in progress
   if ((loading || (subscriptionLoading && requiresSubscription)) && !loadingTimeout) {
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen bg-background p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+            ))}
+          </div>
+          <div className="h-64 bg-muted animate-pulse rounded-lg" />
+        </div>
+      </div>
+    );
   }
 
-  // If loading timed out, allow access with warning
+  // If loading timed out, show error UI with retry option
   if (loadingTimeout) {
-    console.warn('[SubscriptionGuard] Loading timed out - allowing access');
+    console.warn('[SubscriptionGuard] Loading timed out');
     
-    if (!toastMessage) {
-      setToastMessage({
-        title: "Slow Connection Detected",
-        description: "Some features may load slowly. Try refreshing if issues persist.",
-        variant: "default"
-      });
-    }
-    
-    // Allow access anyway - better UX than blocking
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+        <div className="max-w-md w-full space-y-6 text-center">
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-foreground">Connection Issue</h2>
+            <p className="text-muted-foreground">
+              We're having trouble loading your account. This might be due to a slow connection or temporary issue.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => setLoadingTimeout(false)}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/90 transition"
+            >
+              Continue Anyway (Limited Mode)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Check authentication first
