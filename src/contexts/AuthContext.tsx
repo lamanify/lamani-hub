@@ -78,8 +78,8 @@ const performanceMetrics: PerformanceMetrics = {
   fetchDurations: [],
 };
 
-// Fixed cache TTL - 5 minutes for predictable performance
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Cache never expires - valid until logout
+const CACHE_TTL = Infinity;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -98,30 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Debounced subscription checking - minimum 30s between checks
-  const shouldCheckSubscription = (): boolean => {
-    const now = Date.now();
-    const timeSinceLastCheck = now - lastSubscriptionCheck.current;
-    const minimumInterval = 30 * 1000; // 30 seconds
-
-    if (timeSinceLastCheck >= minimumInterval) {
-      lastSubscriptionCheck.current = now;
-      return true;
-    }
-    return false;
-  };
-
-  // Navigation debouncing to prevent cache thrashing
-  const shouldRefreshOnNavigation = (): boolean => {
-    const now = Date.now();
-    const timeSinceLastNav = now - lastNavigationTime.current;
-    const debounceInterval = 5 * 1000; // 5 seconds
-
-    if (timeSinceLastNav >= debounceInterval) {
-      lastNavigationTime.current = now;
-      return true;
-    }
-    return false;
+  // Only refresh subscription on explicit events (login, billing action, manual refresh)
+  const shouldRefreshSubscription = (reason: 'login' | 'billing_action' | 'manual_refresh') => {
+    console.log(`[AuthContext] Subscription refresh triggered: ${reason}`);
+    return true;
   };
 
   const fetchTenantSubscription = async (tenantId: string, planType: string, userRole?: string) => {
@@ -131,28 +111,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionLoading(true);
       console.log("[AuthContext] fetchTenantSubscription starting for tenant:", tenantId);
 
-      // Check session storage cache with fixed 5-minute TTL
-      const cacheKey = `subscription_${tenantId}`;
+      // Check session storage cache (permanent - no expiry)
+      const cacheKey = `subscription_permanent_${tenantId}`;
       const cached = sessionStorage.getItem(cacheKey);
 
       if (cached) {
         try {
-          const { data, timestamp } = JSON.parse(cached);
+          const { data } = JSON.parse(cached);
+          performanceMetrics.cacheHits++;
+          console.log('[AuthContext] CACHE HIT - Using permanent cache (valid until logout)');
 
-          if (Date.now() - timestamp < CACHE_TTL) {
-            performanceMetrics.cacheHits++;
-            console.log(
-              `[AuthContext] CACHE HIT - Using cached subscription data (TTL: ${CACHE_TTL / 1000}s)`,
-            );
-
-            setTenant(data.tenant);
-            setSubscriptionConfig(data.config);
-            setLastSubscriptionFetch(Date.now());
-            setSubscriptionLoading(false);
-            return; // Use cached data
-          } else {
-            console.log(`[AuthContext] Cache expired after ${CACHE_TTL / 1000}s`);
-          }
+          setTenant(data.tenant);
+          setSubscriptionConfig(data.config);
+          setLastSubscriptionFetch(Date.now());
+          setSubscriptionLoading(false);
+          return; // Use cached data
         } catch (e) {
           console.warn("[AuthContext] Failed to parse cached subscription:", e);
         }
@@ -231,16 +204,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSubscriptionConfig(configResult.data);
       setLastSubscriptionFetch(Date.now());
 
-      // Cache the result in session storage with fixed 5-minute TTL
+      // Cache the result in session storage (no expiry - permanent until logout)
       try {
         sessionStorage.setItem(
           cacheKey,
           JSON.stringify({
             data: { tenant: tenantData, config: configResult.data },
-            timestamp: Date.now(),
           }),
         );
-        console.log(`[AuthContext] Data cached with ${CACHE_TTL / 1000}s TTL`);
+        console.log('[AuthContext] Data cached permanently (valid until logout)');
       } catch (e) {
         console.warn("[AuthContext] Failed to cache subscription data:", e);
       }
@@ -358,16 +330,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Start non-blocking background tenant fetch if subscription check is due
-      if (shouldCheckSubscription()) {
-        console.log("[AuthContext] Starting non-blocking background tenant subscription fetch...");
-        
-        // Fire and forget - don't block on subscription data
-        fetchTenantSubscription(profileData.tenant_id, "default", roleData.role).catch((error) => {
-          console.warn("[AuthContext] Background subscription fetch failed:", error);
-        });
-      } else {
-        console.log("[AuthContext] Skipping subscription check due to debouncing (last check was recent)");
+      // Fetch subscription only once on login
+      if (!tenant) {
+        console.log("[AuthContext] Fetching subscription on login...");
+        await fetchTenantSubscription(profileData.tenant_id, "default", roleData.role);
       }
 
       console.log("[AuthContext] fetchProfileAndRole completed successfully (non-blocking)");
@@ -381,23 +347,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshSubscription = async () => {
+    console.log('[AuthContext] Manual subscription refresh requested');
+    
     // Clear all caches on manual refresh
     sessionStorage.removeItem("sub_verified");
     if (profile?.tenant_id) {
-      sessionStorage.removeItem(`subscription_${profile.tenant_id}`);
+      sessionStorage.removeItem(`subscription_permanent_${profile.tenant_id}`);
     }
-
-    // Reset debounce timers on manual refresh
-    lastSubscriptionCheck.current = 0;
-    lastNavigationTime.current = 0;
 
     // Super admins don't have subscriptions to refresh
     if (role === "super_admin") {
       return;
     }
 
-    if (profile?.tenant_id && tenant?.plan_type) {
-      await fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
+    if (profile?.tenant_id) {
+      await fetchTenantSubscription(profile.tenant_id, tenant?.plan_type || "default", role || undefined);
     }
   };
 
@@ -422,35 +386,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return Math.max(0, differenceInDays(new Date(tenant.grace_period_ends_at), new Date()));
   })();
 
-  // Optimized subscription refresh with debouncing - check every 2 minutes but respect debouncing
+  // Real-time subscription updates via Supabase Realtime
   useEffect(() => {
-    // Super admins don't need subscription refresh timers
-    if (role === "super_admin" || !profile?.tenant_id || !tenant?.plan_type) {
-      return;
-    }
+    if (!profile?.tenant_id || role === "super_admin") return;
 
-    const interval = setInterval(
-      () => {
-        if (shouldCheckSubscription()) {
-          console.log("[AuthContext] Periodic subscription check triggered");
-          fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
+    console.log('[AuthContext] Setting up real-time subscription listener');
+
+    const channel = supabase
+      .channel('tenant-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tenants',
+          filter: `id=eq.${profile.tenant_id}`
+        },
+        (payload) => {
+          console.log('[AuthContext] Tenant updated via webhook:', payload.new);
+          setTenant(payload.new as any);
+          
+          // Update permanent cache
+          const cacheKey = `subscription_permanent_${profile.tenant_id}`;
+          try {
+            sessionStorage.setItem(cacheKey, JSON.stringify({
+              data: { tenant: payload.new, config: subscriptionConfig }
+            }));
+          } catch (e) {
+            console.warn('[AuthContext] Failed to update cache:', e);
+          }
         }
-      },
-      2 * 60 * 1000,
-    ); // Check every 2 minutes (but debounced to 30s minimum)
+      )
+      .subscribe();
 
-    return () => clearInterval(interval);
-  }, [profile?.tenant_id, tenant?.plan_type, role]);
-
-  // Navigation-based refresh with debouncing
-  useEffect(() => {
-    if (shouldRefreshOnNavigation() && profile?.tenant_id && tenant?.plan_type && role !== "super_admin") {
-      console.log("[AuthContext] Navigation-triggered subscription check");
-      if (shouldCheckSubscription()) {
-        fetchTenantSubscription(profile.tenant_id, tenant.plan_type, role || undefined);
-      }
-    }
-  }, [location.pathname, profile?.tenant_id, tenant?.plan_type, role]);
+    return () => {
+      console.log('[AuthContext] Cleaning up real-time subscription listener');
+      supabase.removeChannel(channel);
+    };
+  }, [profile?.tenant_id, role, subscriptionConfig]);
 
   useEffect(() => {
     // Check for existing session
@@ -526,13 +499,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Clear all caches and reset performance metrics
       sessionStorage.clear();
+      if (user?.id) {
+        localStorage.removeItem(`user_role_${user.id}`);
+      }
       performanceMetrics.cacheHits = 0;
       performanceMetrics.cacheMisses = 0;
       performanceMetrics.fetchDurations = [];
-
-      // Clear debounce timers
-      lastSubscriptionCheck.current = 0;
-      lastNavigationTime.current = 0;
 
       // Sign out from Supabase
       await supabase.auth.signOut();

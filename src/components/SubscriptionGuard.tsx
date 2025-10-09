@@ -61,22 +61,7 @@ export default function SubscriptionGuard({
     }
   }, [loading, subscriptionLoading]);
 
-  // Check session verification cache - valid for full browser session
-  const sessionVerified = sessionStorage.getItem('sub_verified');
-  if (sessionVerified && !loadingTimeout) {
-    try {
-      const { tenant_id } = JSON.parse(sessionVerified);
-      
-      // No expiry check - valid until browser closes or manual logout
-      if (tenant?.id === tenant_id) {
-        console.log('[SubscriptionGuard] Using session verification cache (no expiry)');
-        return <>{children}</>;
-      }
-    } catch (e) {
-      console.warn('[SubscriptionGuard] Failed to parse session cache:', e);
-      sessionStorage.removeItem('sub_verified');
-    }
-  }
+  // Removed redundant session verification cache - AuthContext handles all caching
 
   // If subscription is not required, skip all loading checks
   if (!requiresSubscription && !requiresSuperAdmin) {
@@ -179,14 +164,6 @@ export default function SubscriptionGuard({
 
   // Allow access for active subscriptions (active, trial, trialing, comped)
   if (status === 'active' || status === 'trial' || status === 'trialing' || status === 'comped') {
-    // Cache session verification for full browser session (no expiry)
-    try {
-      sessionStorage.setItem('sub_verified', JSON.stringify({
-        tenant_id: tenant.id
-      }));
-    } catch (e) {
-      console.warn('[SubscriptionGuard] Failed to cache session verification:', e);
-    }
     return <>{children}</>;
   }
 
@@ -197,7 +174,6 @@ export default function SubscriptionGuard({
 
   // Redirect to billing for other statuses
   if (status === 'past_due' && !isInGracePeriod) {
-    sessionStorage.removeItem('sub_verified'); // Clear cache on billing redirect
     if (!toastMessage) {
       setToastMessage({
         title: "Grace Period Expired",
@@ -209,7 +185,6 @@ export default function SubscriptionGuard({
   }
 
   if (status === 'suspended') {
-    sessionStorage.removeItem('sub_verified'); // Clear cache
     if (!toastMessage) {
       setToastMessage({
         title: "Account Suspended",
@@ -221,7 +196,6 @@ export default function SubscriptionGuard({
   }
 
   if (status === 'cancelled' || status === 'canceled') {
-    sessionStorage.removeItem('sub_verified'); // Clear cache
     if (!toastMessage) {
       setToastMessage({
         title: "Subscription Ended",
@@ -233,7 +207,6 @@ export default function SubscriptionGuard({
   }
 
   if (status === 'inactive') {
-    sessionStorage.removeItem('sub_verified'); // Clear cache
     if (!toastMessage) {
       setToastMessage({
         title: "Subscription Required",
@@ -245,7 +218,6 @@ export default function SubscriptionGuard({
   }
 
   // Default: redirect to billing
-  sessionStorage.removeItem('sub_verified'); // Clear cache
   if (!toastMessage) {
     setToastMessage({
       title: "Subscription Required",

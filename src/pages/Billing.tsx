@@ -28,16 +28,23 @@ export default function Billing() {
 
   // Handle success/cancel callbacks from Stripe
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    if (params.get("success") === "true") {
-      toast.success("Subscription activated! Welcome to LamaniHub.");
-      navigate("/billing", { replace: true });
-      refreshSubscription();
-    }
-    if (params.get("canceled") === "true") {
-      toast.info("Checkout was cancelled. You can try again anytime.");
-      navigate("/billing", { replace: true });
-    }
+    const handleStripeCallback = async () => {
+      const params = new URLSearchParams(location.search);
+      
+      if (params.get("success") === "true") {
+        toast.success("Subscription activated! Refreshing...");
+        await refreshSubscription(); // Wait for refresh
+        toast.success("Welcome to LamaniHub!");
+        navigate("/billing", { replace: true });
+      }
+      
+      if (params.get("canceled") === "true") {
+        toast.info("Checkout was cancelled. You can try again anytime.");
+        navigate("/billing", { replace: true });
+      }
+    };
+
+    handleStripeCallback();
   }, [location.search, navigate, refreshSubscription]);
 
   const handleStartCheckout = async () => {
