@@ -108,6 +108,11 @@ export function ImportLeadsModal() {
   const [duplicateHandling, setDuplicateHandling] = useState<"skip" | "update" | "create">("skip");
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
+  
+  // Header row detection state
+  const [rawFileData, setRawFileData] = useState<any[][] | null>(null);
+  const [headerRowIndex, setHeaderRowIndex] = useState(0);
+  const [showHeaderSelector, setShowHeaderSelector] = useState(false);
 
   // Custom properties state
   const [existingProperties, setExistingProperties] = useState<PropertyDefinition[]>([]);
@@ -155,6 +160,9 @@ export function ImportLeadsModal() {
       is_required: false,
       is_sensitive: false,
     });
+    setRawFileData(null);
+    setHeaderRowIndex(0);
+    setShowHeaderSelector(false);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,6 +180,64 @@ export function ImportLeadsModal() {
     setFile(selectedFile);
     parseFile(selectedFile);
   };
+
+  // Process the parsed data with selected header row
+  const processParsedData = useCallback(
+    (data: any[][], selectedHeaderRow: number = 0) => {
+      if (data.length < 2) {
+        toast.error("File must contain at least a header row and one data row");
+        return;
+      }
+
+      const headers = data[selectedHeaderRow].map((h) => String(h || "").trim());
+      const rows = data.slice(selectedHeaderRow + 1).filter((row) => row.some((cell) => String(cell || "").trim()));
+
+      if (rows.length === 0) {
+        toast.error("No data rows found after header row");
+        return;
+      }
+
+      const preview = rows.slice(0, 5).map((row) => {
+        const obj: Record<string, string> = {};
+        headers.forEach((header, index) => {
+          obj[header] = String(row[index] || "").trim();
+        });
+        return obj;
+      });
+
+      setParsedData({ headers, rows, preview });
+      setCurrentStep("mapping");
+
+      // Auto-map columns
+      const autoMapping: FieldMapping = {};
+      for (const header of headers) {
+        const lowerHeader = header.toLowerCase().trim();
+        if (lowerHeader.includes("name") || lowerHeader === "full name") {
+          autoMapping[header] = "name";
+        } else if (lowerHeader.includes("phone") || lowerHeader.includes("mobile")) {
+          autoMapping[header] = "phone";
+        } else if (lowerHeader.includes("email")) {
+          autoMapping[header] = "email";
+        } else if (lowerHeader.includes("source")) {
+          autoMapping[header] = "source";
+        } else if (lowerHeader.includes("status")) {
+          autoMapping[header] = "status";
+        } else if (lowerHeader.includes("consent")) {
+          autoMapping[header] = "consent_given";
+        } else {
+          // Try to match with existing custom properties
+          const matchingProp = existingProperties.find(
+            (prop) => prop.label.toLowerCase() === lowerHeader || prop.key === header
+          );
+          if (matchingProp) {
+            autoMapping[header] = `custom.${matchingProp.key}`;
+          }
+        }
+      }
+      setFieldMapping(autoMapping);
+    },
+    [existingProperties]
+  );
 
   const parseFile = useCallback(
     (file: File) => {
@@ -192,47 +258,29 @@ export function ImportLeadsModal() {
               return;
             }
 
-            const headers = data[0].map((h) => h?.trim() || "");
-            const rows = data.slice(1).filter((row) => row.some((cell) => cell?.trim()));
+            // Store raw data
+            setRawFileData(data);
 
-            const preview = rows.slice(0, 5).map((row) => {
-              const obj: Record<string, string> = {};
-              headers.forEach((header, index) => {
-                obj[header] = row[index]?.trim() || "";
-              });
-              return obj;
-            });
-
-            setParsedData({ headers, rows, preview });
-            setCurrentStep("mapping");
-
-            // Auto-map columns
-            const autoMapping: FieldMapping = {};
-            for (const header of headers) {
-              const lowerHeader = header.toLowerCase().trim();
-              if (lowerHeader.includes("name") || lowerHeader === "full name") {
-                autoMapping[header] = "name";
-              } else if (lowerHeader.includes("phone") || lowerHeader.includes("mobile")) {
-                autoMapping[header] = "phone";
-              } else if (lowerHeader.includes("email")) {
-                autoMapping[header] = "email";
-              } else if (lowerHeader.includes("source")) {
-                autoMapping[header] = "source";
-              } else if (lowerHeader.includes("status")) {
-                autoMapping[header] = "status";
-              } else if (lowerHeader.includes("consent")) {
-                autoMapping[header] = "consent_given";
-              } else {
-                // Try to match with existing custom properties
-                const matchingProp = existingProperties.find(
-                  (prop) => prop.label.toLowerCase() === lowerHeader || prop.key === header
-                );
-                if (matchingProp) {
-                  autoMapping[header] = `custom.${matchingProp.key}`;
-                }
-              }
+            // Intelligent title row detection
+            const firstRowColCount = data[0].filter((cell) => cell?.trim()).length;
+            const secondRowColCount = data[1] ? data[1].filter((cell) => cell?.trim()).length : 0;
+            
+            // If first row has only 1 column but second row has multiple, likely a title row
+            if (firstRowColCount === 1 && secondRowColCount > 1) {
+              setHeaderRowIndex(1);
+              setShowHeaderSelector(true);
+              processParsedData(data, 1);
+              toast.info("Detected title row. Using row 2 as headers.");
+            } else if (data.length > 2 && secondRowColCount > firstRowColCount * 1.5) {
+              // If second row has significantly more columns, might be the real header
+              setShowHeaderSelector(true);
+              processParsedData(data, 0);
+            } else {
+              // Standard case: use first row as header
+              setHeaderRowIndex(0);
+              setShowHeaderSelector(false);
+              processParsedData(data, 0);
             }
-            setFieldMapping(autoMapping);
           },
           error: () => {
             toast.error("Failed to parse CSV file");
@@ -253,40 +301,29 @@ export function ImportLeadsModal() {
               return;
             }
 
-            const headers = jsonData[0].map((h) => String(h || "").trim());
-            const rows = jsonData.slice(1).filter((row) => row.some((cell) => String(cell || "").trim()));
+            // Store raw data
+            setRawFileData(jsonData);
 
-            const preview = rows.slice(0, 5).map((row) => {
-              const obj: Record<string, string> = {};
-              headers.forEach((header, index) => {
-                obj[header] = String(row[index] || "").trim();
-              });
-              return obj;
-            });
-
-            setParsedData({ headers, rows, preview });
-            setCurrentStep("mapping");
-
-            // Auto-map columns
-            const autoMapping: FieldMapping = {};
-            for (const header of headers) {
-              const lowerHeader = header.toLowerCase().trim();
-              if (lowerHeader.includes("name")) autoMapping[header] = "name";
-              else if (lowerHeader.includes("phone") || lowerHeader.includes("mobile")) autoMapping[header] = "phone";
-              else if (lowerHeader.includes("email")) autoMapping[header] = "email";
-              else if (lowerHeader.includes("source")) autoMapping[header] = "source";
-              else if (lowerHeader.includes("status")) autoMapping[header] = "status";
-              else if (lowerHeader.includes("consent")) autoMapping[header] = "consent_given";
-              else {
-                const matchingProp = existingProperties.find(
-                  (prop) => prop.label.toLowerCase() === lowerHeader || prop.key === header
-                );
-                if (matchingProp) {
-                  autoMapping[header] = `custom.${matchingProp.key}`;
-                }
-              }
+            // Intelligent title row detection
+            const firstRowColCount = jsonData[0].filter((cell) => String(cell || "").trim()).length;
+            const secondRowColCount = jsonData[1] ? jsonData[1].filter((cell) => String(cell || "").trim()).length : 0;
+            
+            // If first row has only 1 column but second row has multiple, likely a title row
+            if (firstRowColCount === 1 && secondRowColCount > 1) {
+              setHeaderRowIndex(1);
+              setShowHeaderSelector(true);
+              processParsedData(jsonData, 1);
+              toast.info("Detected title row. Using row 2 as headers.");
+            } else if (jsonData.length > 2 && secondRowColCount > firstRowColCount * 1.5) {
+              // If second row has significantly more columns, might be the real header
+              setShowHeaderSelector(true);
+              processParsedData(jsonData, 0);
+            } else {
+              // Standard case: use first row as header
+              setHeaderRowIndex(0);
+              setShowHeaderSelector(false);
+              processParsedData(jsonData, 0);
             }
-            setFieldMapping(autoMapping);
           } catch (error) {
             toast.error("Failed to parse Excel file");
           }
@@ -294,7 +331,7 @@ export function ImportLeadsModal() {
         reader.readAsArrayBuffer(file);
       }
     },
-    [existingProperties]
+    [existingProperties, processParsedData]
   );
 
   const inferDataType = (csvColumn: string): string => {
@@ -540,6 +577,91 @@ export function ImportLeadsModal() {
           </p>
         )}
       </div>
+
+      {/* Header Row Selector */}
+      {showHeaderSelector && rawFileData && rawFileData.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-primary" />
+              Select Header Row
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              We detected that your file might have a title row. Please select which row contains your column headers.
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="header-row">Header Row</Label>
+              <Select
+                value={headerRowIndex.toString()}
+                onValueChange={(value) => {
+                  const newIndex = parseInt(value);
+                  setHeaderRowIndex(newIndex);
+                  processParsedData(rawFileData, newIndex);
+                }}
+              >
+                <SelectTrigger id="header-row">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {rawFileData.slice(0, 3).map((row, index) => {
+                    const preview = row.slice(0, 5).map(cell => String(cell || "")).join(", ");
+                    return (
+                      <SelectItem key={index} value={index.toString()}>
+                        Row {index + 1}: {preview.length > 50 ? preview.substring(0, 50) + "..." : preview}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Preview of first 3 rows */}
+            <div className="space-y-2">
+              <Label>File Preview</Label>
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableBody>
+                    {rawFileData.slice(0, 3).map((row, rowIndex) => (
+                      <TableRow key={rowIndex} className={rowIndex === headerRowIndex ? "bg-primary/10" : ""}>
+                        <TableCell className="font-mono text-xs py-2 px-3 border-r">
+                          {rowIndex === headerRowIndex && (
+                            <Badge variant="default" className="text-xs mr-2">Header</Badge>
+                          )}
+                          Row {rowIndex + 1}
+                        </TableCell>
+                        <TableCell className="py-2 px-3">
+                          <div className="flex gap-2 overflow-x-auto">
+                            {row.slice(0, 6).map((cell, cellIndex) => {
+                              const cellValue = String(cell || "").trim();
+                              return (
+                                <div key={cellIndex} className="text-xs px-2 py-1 bg-muted rounded min-w-[80px] truncate">
+                                  {cellValue || <span className="text-muted-foreground italic">empty</span>}
+                                </div>
+                              );
+                            })}
+                            {row.length > 6 && (
+                              <div className="text-xs text-muted-foreground px-2 py-1">
+                                +{row.length - 6} more
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            <Button onClick={() => setCurrentStep("mapping")} className="w-full">
+              Continue to Mapping
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
