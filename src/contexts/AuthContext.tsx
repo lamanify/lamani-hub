@@ -279,19 +279,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             await new Promise(resolve => setTimeout(resolve, delays[attempt]));
           }
 
-          // Fetch profile and role in single query using JOIN
+          // Fetch profile first
           const { data: profile, error: profileError } = await supabase
             .from("profiles")
-            .select(`
-              user_id,
-              tenant_id,
-              full_name,
-              user_roles (role)
-            `)
+            .select("user_id, tenant_id, full_name")
             .eq("user_id", userId)
             .single();
 
           if (profileError) throw profileError;
+          if (!profile) throw new Error("Profile not found");
 
           profileData = {
             user_id: profile.user_id,
@@ -299,7 +295,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             full_name: profile.full_name,
           };
 
-          const userRole = (profile as any).user_roles?.[0]?.role || cachedRole || 'clinic_user';
+          // Fetch role separately
+          const { data: userRoleData, error: roleError } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", userId)
+            .single();
+
+          if (roleError) throw roleError;
+
+          const userRole = userRoleData?.role || cachedRole || 'clinic_user';
           roleData = { role: userRole };
 
           // Cache role in localStorage
