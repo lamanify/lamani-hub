@@ -5,6 +5,7 @@ import {
   Upload,
   AlertCircle,
   CheckCircle,
+  CheckCircle2,
   Download,
   ArrowRight,
   Plus,
@@ -545,165 +546,292 @@ export function ImportLeadsModal() {
   const renderMappingStep = () => {
     if (!parsedData) return null;
 
+    const mappedCount = Object.keys(fieldMapping).filter((k) => fieldMapping[k] && fieldMapping[k] !== "__skip__").length;
+    const totalFields = parsedData.headers.length;
+    const requiredFields = ["name", "phone", "email"];
+    const missingRequired = requiredFields.filter((field) => !Object.values(fieldMapping).includes(field));
+
     return (
       <div className="space-y-6">
         <div>
           <h3 className="text-lg font-semibold mb-2">Map Your Fields</h3>
           <p className="text-sm text-muted-foreground">
-            Map columns from your file to CRM fields. Create custom properties as needed.
+            Map columns from your CSV file to CRM properties. Create custom properties for new fields.
           </p>
         </div>
 
-        <div className="space-y-3">
-          {parsedData.headers.map((header, index) => (
-            <div key={index} className="space-y-2">
-              <div className="flex items-center gap-4 p-3 border rounded-lg">
-                <div className="flex-1 min-w-0">
-                  <Label className="font-medium">{header}</Label>
-                  <p className="text-xs text-muted-foreground truncate">
-                    Sample: {parsedData.preview[0]?.[header] || "N/A"}
-                  </p>
+        {/* Progress Indicator */}
+        <Card className="bg-muted/50">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">
+                    {mappedCount} of {totalFields} fields mapped
+                  </span>
                 </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1">
-                  {creatingPropertyFor === header ? (
-                    <Badge variant="secondary" className="text-xs">
-                      Creating property...
-                    </Badge>
-                  ) : (
+                {missingRequired.length > 0 && (
+                  <Badge variant="destructive" className="text-xs">
+                    {missingRequired.length} required field{missingRequired.length > 1 ? "s" : ""} missing
+                  </Badge>
+                )}
+              </div>
+              {newProperties.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {newProperties.length} new propert{newProperties.length === 1 ? "y" : "ies"}
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Mapping Grid Header */}
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-4 px-3 pb-2 border-b">
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            CSV Column
+          </div>
+          <div className="w-8"></div>
+          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Map to Property
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {parsedData.headers.map((header, index) => {
+            const isRequired = requiredFields.includes(fieldMapping[header]);
+            const sampleValues = parsedData.preview.slice(0, 3).map((row) => row[header]).filter(Boolean);
+
+            return (
+              <div key={index} className="space-y-2">
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-4 p-4 border rounded-lg bg-card hover:border-primary/50 transition-colors">
+                  {/* CSV Column Section */}
+                  <div className="space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <Select value={fieldMapping[header] || ""} onValueChange={(value) => handleFieldMappingChange(header, value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select field..." />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          {CORE_CRM_FIELDS.filter((f) => f.isSpecial).map((field) => (
-                            <SelectItem key={field.value} value={field.value}>
-                              {field.value === "__create_new__" && <Plus className="h-3 w-3 inline mr-2" />}
-                              {field.label}
-                            </SelectItem>
-                          ))}
-                          <Separator className="my-1" />
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Core Fields</div>
-                          {CORE_CRM_FIELDS.filter((f) => !f.isSpecial).map((field) => (
-                            <SelectItem key={field.value} value={field.value}>
-                              {field.label}
-                            </SelectItem>
-                          ))}
-                          {existingProperties.length > 0 && (
-                            <>
-                              <Separator className="my-1" />
-                              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Custom Fields</div>
-                              {existingProperties.map((prop) => (
-                                <SelectItem key={prop.key} value={`custom.${prop.key}`}>
-                                  {prop.label}
-                                </SelectItem>
-                              ))}
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      {fieldMapping[header]?.startsWith("custom.") && (
-                        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                          {newProperties.find((p) => `custom.${p.key}` === fieldMapping[header]) ? "New" : "Custom"}
+                      <span className="font-semibold text-base">{header}</span>
+                      {isRequired && (
+                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/20">
+                          Required
                         </Badge>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
+                    <div className="space-y-0.5">
+                      <p className="text-xs text-muted-foreground">Sample data:</p>
+                      {sampleValues.length > 0 ? (
+                        sampleValues.map((val, idx) => (
+                          <p key={idx} className="text-xs text-foreground/80 truncate">
+                            • {val}
+                          </p>
+                        ))
+                      ) : (
+                        <p className="text-xs text-muted-foreground italic">No data</p>
+                      )}
+                    </div>
+                  </div>
 
-              {creatingPropertyFor === header && (
-                <Card className="border-primary ml-4">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Sparkles className="h-4 w-4" />
-                      Create New Property
-                    </CardTitle>
-                    <CardDescription className="text-xs">Suggested type: {newPropertyForm.data_type}</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="new-label" className="text-xs">
-                          Property Label
-                        </Label>
-                        <Input
-                          id="new-label"
-                          value={newPropertyForm.label}
-                          onChange={(e) => {
-                            const label = e.target.value;
-                            setNewPropertyForm((prev) => ({
-                              ...prev,
-                              label,
-                              key: generatePropertyKey(label),
-                            }));
-                          }}
-                          placeholder="e.g., Treatment Interest"
-                          className="h-8"
-                        />
+                  {/* Arrow */}
+                  <div className="flex items-center justify-center">
+                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+
+                  {/* Property Selection Section */}
+                  <div className="space-y-2">
+                    {creatingPropertyFor === header ? (
+                      <Badge variant="secondary" className="text-xs">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Creating property...
+                      </Badge>
+                    ) : (
+                      <div className="space-y-2">
+                        <Select value={fieldMapping[header] || ""} onValueChange={(value) => handleFieldMappingChange(header, value)}>
+                          <SelectTrigger className="bg-background">
+                            <SelectValue placeholder="Select or create property..." />
+                          </SelectTrigger>
+                          <SelectContent className="bg-background z-50">
+                            {/* Create New Property - Top Priority */}
+                            <SelectItem value="__create_new__" className="font-medium text-primary">
+                              <div className="flex items-center gap-2">
+                                <Plus className="h-4 w-4" />
+                                <span>Create New Property</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="__skip__" className="text-muted-foreground">
+                              --- Do not import ---
+                            </SelectItem>
+                            
+                            <Separator className="my-2" />
+                            
+                            {/* Core Fields */}
+                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Core Fields</div>
+                            {CORE_CRM_FIELDS.filter((f) => !f.isSpecial).map((field) => (
+                              <SelectItem key={field.value} value={field.value}>
+                                <div className="flex items-center justify-between w-full">
+                                  <span>{field.label}</span>
+                                  {requiredFields.includes(field.value) && (
+                                    <Badge variant="outline" className="ml-2 text-xs">Required</Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                            
+                            {/* Custom Fields */}
+                            {existingProperties.length > 0 && (
+                              <>
+                                <Separator className="my-2" />
+                                <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">Custom Fields</div>
+                                {existingProperties.map((prop) => (
+                                  <SelectItem key={prop.key} value={`custom.${prop.key}`}>
+                                    <div className="flex items-center gap-2">
+                                      <span>{prop.label}</span>
+                                      <Badge variant="outline" className="text-xs">{prop.data_type}</Badge>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        
+                        {/* Property Badge */}
+                        {fieldMapping[header] && fieldMapping[header] !== "__skip__" && (
+                          <div className="flex items-center gap-2">
+                            {fieldMapping[header]?.startsWith("custom.") ? (
+                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                {newProperties.find((p) => `custom.${p.key}` === fieldMapping[header]) ? "New Property" : "Custom Property"}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">
+                                Core Field
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="new-key" className="text-xs">
-                          Property Key
-                        </Label>
-                        <Input
-                          id="new-key"
-                          value={newPropertyForm.key}
-                          onChange={(e) => setNewPropertyForm((prev) => ({ ...prev, key: e.target.value }))}
-                          placeholder="e.g., treatment_interest"
-                          className="h-8 font-mono text-xs"
-                        />
+                    )}
+                  </div>
+                </div>
+
+                {/* Inline Property Creation Form */}
+                {creatingPropertyFor === header && (
+                  <Card className="border-primary shadow-lg ml-8">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Create New Property for "{header}"
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Auto-detected type: <span className="font-medium">{newPropertyForm.data_type}</span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Side-by-side: CSV Data Preview + Property Form */}
+                      <div className="grid md:grid-cols-[200px_1fr] gap-4">
+                        {/* CSV Data Preview */}
+                        <div className="space-y-1.5 p-3 bg-muted/50 rounded-lg">
+                          <p className="text-xs font-semibold text-muted-foreground">CSV Data Preview</p>
+                          <div className="space-y-1">
+                            {sampleValues.slice(0, 5).map((val, idx) => (
+                              <p key={idx} className="text-xs font-mono text-foreground/80 truncate">
+                                {val}
+                              </p>
+                            ))}
+                            {sampleValues.length === 0 && (
+                              <p className="text-xs text-muted-foreground italic">No sample data</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Property Configuration Form */}
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="new-label" className="text-xs font-medium">
+                                Property Label *
+                              </Label>
+                              <Input
+                                id="new-label"
+                                value={newPropertyForm.label}
+                                onChange={(e) => {
+                                  const label = e.target.value;
+                                  setNewPropertyForm((prev) => ({
+                                    ...prev,
+                                    label,
+                                    key: generatePropertyKey(label),
+                                  }));
+                                }}
+                                placeholder="e.g., Treatment Interest"
+                                className="h-9"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor="new-key" className="text-xs font-medium">
+                                Property Key *
+                              </Label>
+                              <Input
+                                id="new-key"
+                                value={newPropertyForm.key}
+                                onChange={(e) => setNewPropertyForm((prev) => ({ ...prev, key: e.target.value }))}
+                                placeholder="e.g., treatment_interest"
+                                className="h-9 font-mono text-xs"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1.5">
+                            <Label htmlFor="new-type" className="text-xs font-medium">
+                              Data Type
+                            </Label>
+                            <Select value={newPropertyForm.data_type} onValueChange={(value) => setNewPropertyForm((prev) => ({ ...prev, data_type: value }))}>
+                              <SelectTrigger id="new-type" className="h-9">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-background z-50">
+                                <SelectItem value="string">Text</SelectItem>
+                                <SelectItem value="number">Number</SelectItem>
+                                <SelectItem value="date">Date</SelectItem>
+                                <SelectItem value="email">Email</SelectItem>
+                                <SelectItem value="phone">Phone</SelectItem>
+                                <SelectItem value="url">URL</SelectItem>
+                                <SelectItem value="boolean">Yes/No</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                              <Checkbox
+                                checked={newPropertyForm.show_in_list}
+                                onCheckedChange={(checked) => setNewPropertyForm((prev) => ({ ...prev, show_in_list: checked as boolean }))}
+                              />
+                              <span>Show in list view</span>
+                            </label>
+                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                              <Checkbox
+                                checked={newPropertyForm.is_sensitive}
+                                onCheckedChange={(checked) => setNewPropertyForm((prev) => ({ ...prev, is_sensitive: checked as boolean }))}
+                              />
+                              <span>Sensitive data (PDPA)</span>
+                            </label>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="new-type" className="text-xs">
-                        Data Type
-                      </Label>
-                      <Select value={newPropertyForm.data_type} onValueChange={(value) => setNewPropertyForm((prev) => ({ ...prev, data_type: value }))}>
-                        <SelectTrigger id="new-type" className="h-8">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background z-50">
-                          <SelectItem value="string">Text</SelectItem>
-                          <SelectItem value="number">Number</SelectItem>
-                          <SelectItem value="date">Date</SelectItem>
-                          <SelectItem value="email">Email</SelectItem>
-                          <SelectItem value="phone">Phone</SelectItem>
-                          <SelectItem value="url">URL</SelectItem>
-                          <SelectItem value="boolean">Yes/No</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center gap-4 pt-2">
-                      <label className="flex items-center gap-2 text-xs cursor-pointer">
-                        <Checkbox
-                          checked={newPropertyForm.show_in_list}
-                          onCheckedChange={(checked) => setNewPropertyForm((prev) => ({ ...prev, show_in_list: checked as boolean }))}
-                        />
-                        Show in list
-                      </label>
-                      <label className="flex items-center gap-2 text-xs cursor-pointer">
-                        <Checkbox
-                          checked={newPropertyForm.is_sensitive}
-                          onCheckedChange={(checked) => setNewPropertyForm((prev) => ({ ...prev, is_sensitive: checked as boolean }))}
-                        />
-                        Sensitive (PDPA)
-                      </label>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button onClick={handleCreateProperty} size="sm" className="flex-1">
-                        Create & Map
-                      </Button>
-                      <Button onClick={handleCancelCreateProperty} variant="outline" size="sm">
-                        Cancel
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          ))}
+
+                      {/* Action Buttons */}
+                      <div className="flex gap-2 pt-2">
+                        <Button onClick={handleCreateProperty} size="sm" className="flex-1">
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Create & Map Property
+                        </Button>
+                        <Button onClick={handleCancelCreateProperty} variant="outline" size="sm">
+                          Cancel
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {newProperties.length > 0 && (
