@@ -782,9 +782,25 @@ export function ImportLeadsModal() {
                       <div className="space-y-2">
                         <Select value={fieldMapping[header] || ""} onValueChange={(value) => handleFieldMappingChange(header, value)}>
                           <SelectTrigger className="bg-background">
-                            <SelectValue placeholder="Select or create property..." />
+                            <SelectValue placeholder="Select or create property...">
+                              {fieldMapping[header] ? (
+                                (() => {
+                                  if (fieldMapping[header] === "__skip__") return "--- Do not import ---";
+                                  if (fieldMapping[header]?.startsWith("custom.")) {
+                                    const customKey = fieldMapping[header].replace("custom.", "");
+                                    const existingProp = existingProperties.find(p => p.key === customKey);
+                                    const newProp = newProperties.find(p => p.key === customKey);
+                                    return existingProp?.label || newProp?.label || customKey;
+                                  }
+                                  const coreField = CORE_CRM_FIELDS.find(f => f.value === fieldMapping[header]);
+                                  return coreField?.label || fieldMapping[header];
+                                })()
+                              ) : (
+                                "Select or create property..."
+                              )}
+                            </SelectValue>
                           </SelectTrigger>
-                          <SelectContent className="bg-background z-50">
+                          <SelectContent className="bg-popover border-border z-50 max-h-[300px]">
                             {/* Create New Property - Top Priority */}
                             <SelectItem value="__create_new__" className="font-medium text-primary">
                               <div className="flex items-center gap-2">
