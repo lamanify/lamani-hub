@@ -557,27 +557,9 @@ export default function Leads() {
                           </TableCell>
 
                           <TableCell>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between gap-2">
                               <span className="text-sm whitespace-nowrap">{formatPhone(lead.phone)}</span>
-                              <div className="flex gap-1">
-                                <WhatsAppButton phone={lead.phone} variant="default" size="sm" />
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-7 w-7"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        copyToClipboard(lead.phone);
-                                      }}
-                                    >
-                                      <Copy className="h-3.5 w-3.5" />
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent>Copy</TooltipContent>
-                                </Tooltip>
-                              </div>
+                              <WhatsAppButton phone={lead.phone} variant="icon" size="icon" />
                             </div>
                           </TableCell>
 
