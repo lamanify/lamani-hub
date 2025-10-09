@@ -33,7 +33,7 @@ interface ImportResult {
 }
 
 const CRM_FIELDS = [
-  { value: '', label: 'Do not import' },
+  { value: '__skip__', label: 'Do not import' },
   { value: 'name', label: 'Name *', required: true },
   { value: 'phone', label: 'Phone *', required: true },
   { value: 'email', label: 'Email' },
@@ -200,14 +200,21 @@ export function ImportLeadsModal() {
   }, []);
 
   const handleFieldMappingChange = (csvColumn: string, crmField: string) => {
-    setFieldMapping(prev => ({
-      ...prev,
-      [csvColumn]: crmField
-    }));
+    setFieldMapping(prev => {
+      if (crmField === '__skip__') {
+        const newMapping = { ...prev };
+        delete newMapping[csvColumn];
+        return newMapping;
+      }
+      return {
+        ...prev,
+        [csvColumn]: crmField
+      };
+    });
   };
 
   const validateMapping = () => {
-    const mappedFields = Object.values(fieldMapping).filter(field => field);
+    const mappedFields = Object.values(fieldMapping).filter(field => field && field !== '__skip__');
     const requiredFields = CRM_FIELDS.filter(field => field.required).map(field => field.value);
     
     const missingRequired = requiredFields.filter(field => !mappedFields.includes(field));
@@ -422,7 +429,7 @@ export function ImportLeadsModal() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  {Object.values(fieldMapping).filter(field => field).map((field, index) => (
+                  {Object.values(fieldMapping).filter(field => field && field !== '__skip__').map((field, index) => (
                     <TableHead key={index}>{CRM_FIELDS.find(f => f.value === field)?.label || field}</TableHead>
                   ))}
                 </TableRow>
@@ -430,7 +437,7 @@ export function ImportLeadsModal() {
               <TableBody>
                 {parsedData.preview.map((row, index) => (
                   <TableRow key={index}>
-                    {Object.entries(fieldMapping).filter(([_, field]) => field).map(([csvCol, crmField], cellIndex) => (
+                    {Object.entries(fieldMapping).filter(([_, field]) => field && field !== '__skip__').map(([csvCol, crmField], cellIndex) => (
                       <TableCell key={cellIndex}>
                         {row[csvCol] || (crmField ? defaultValues[crmField as keyof typeof defaultValues] : '')}
                       </TableCell>
