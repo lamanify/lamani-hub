@@ -242,12 +242,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetchingProfileRef.current = userId;
       console.log("[AuthContext] fetchProfileAndRole starting for user:", userId);
 
-      // Check current session
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log("[AuthContext] Current session:", session?.user?.id);
-
       // Fetch role and profile in parallel with 10s timeout for each
       console.log("[AuthContext] Fetching profile with role in single query...");
 
