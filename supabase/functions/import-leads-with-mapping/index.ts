@@ -351,11 +351,15 @@ serve(async (req) => {
                 leadData.custom[customKey] = value
                 
                 // Increment usage count for this property
-                await supabase.rpc('increment_property_usage', {
-                  p_tenant_id: profile.tenant_id,
-                  p_entity: 'lead',
-                  p_key: customKey
-                }).catch(err => console.error('Failed to increment usage:', err))
+                try {
+                  await supabase.rpc('increment_property_usage', {
+                    p_tenant_id: profile.tenant_id,
+                    p_entity: 'lead',
+                    p_key: customKey
+                  })
+                } catch (err) {
+                  console.error('Failed to increment usage:', err)
+                }
               }
               break
           }
