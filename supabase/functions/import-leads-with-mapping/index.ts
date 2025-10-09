@@ -16,12 +16,23 @@ interface DefaultValues {
   consent_given: boolean
 }
 
+interface NewProperty {
+  key: string
+  label: string
+  data_type: string
+  show_in_list: boolean
+  is_required: boolean
+  is_sensitive: boolean
+  created_via?: string
+}
+
 interface ImportRequest {
   fieldMapping: FieldMapping
   rows: string[][]
   defaultValues: DefaultValues
   duplicateHandling: 'skip' | 'update' | 'create'
   headers: string[]
+  newProperties?: NewProperty[]
 }
 
 interface ImportResult {
@@ -30,6 +41,7 @@ interface ImportResult {
   skipped: number
   duplicates: number
   errors: Array<{ row: number; reason: string; data?: any }>
+  newPropertiesCreated?: number
 }
 
 // Normalize Malaysian phone numbers
@@ -141,18 +153,109 @@ serve(async (req) => {
       rows,
       defaultValues,
       duplicateHandling,
-      headers
+      headers,
+      newProperties
     }: ImportRequest = await req.json()
 
     console.log(`Import requested by ${user.email} for tenant ${profile.tenant_id}`)
     console.log(`Processing ${rows.length} rows with mapping:`, fieldMapping)
+    
+    // Reserved keys that cannot be used as custom property keys
+    const RESERVED_KEYS = ['id', 'tenant_id', 'name', 'phone', 'email', 'source', 'status', 
+                           'consent_given', 'consent_timestamp', 'consent_ip', 'created_by', 
+                           'modified_by', 'created_at', 'updated_at', 'custom']
+
+    // Create new custom properties if provided
+    let newPropertiesCreated = 0
+    if (newProperties && newProperties.length > 0) {
+      console.log(`Creating ${newProperties.length} new custom properties`)
+      
+      // Check property count limit (100 per tenant)
+      const { count: existingCount } = await supabase
+        .from('property_definitions')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', profile.tenant_id)
+        .eq('entity', 'lead')
+
+      if (existingCount && (existingCount + newProperties.length) > 100) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'Property limit exceeded',
+            message: `Cannot create ${newProperties.length} new properties. Tenant has ${existingCount}/100 properties.`
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      for (const prop of newProperties) {
+        // Validate key
+        if (RESERVED_KEYS.includes(prop.key)) {
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'Reserved key',
+              message: `Cannot use reserved key: ${prop.key}`
+            }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        // Check if property already exists
+        const { data: existing } = await supabase
+          .from('property_definitions')
+          .select('id')
+          .eq('tenant_id', profile.tenant_id)
+          .eq('entity', 'lead')
+          .eq('key', prop.key)
+          .single()
+
+        if (existing) {
+          console.log(`Property ${prop.key} already exists, skipping creation`)
+          continue
+        }
+
+        // Create the property
+        const { error: propError } = await supabase
+          .from('property_definitions')
+          .insert({
+            tenant_id: profile.tenant_id,
+            entity: 'lead',
+            key: prop.key,
+            label: prop.label,
+            data_type: prop.data_type,
+            show_in_list: prop.show_in_list,
+            is_required: prop.is_required,
+            is_sensitive: prop.is_sensitive,
+            sort_order: 999,
+            usage_count: 0,
+            options: prop.created_via ? { created_via: prop.created_via, import_date: new Date().toISOString() } : null
+          })
+
+        if (propError) {
+          console.error(`Failed to create property ${prop.key}:`, propError)
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'Property creation failed',
+              message: `Failed to create property ${prop.key}: ${propError.message}`
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+
+        newPropertiesCreated++
+        console.log(`Created custom property: ${prop.key} (${prop.label})`)
+      }
+    }
 
     const result: ImportResult = {
       success: true,
       imported: 0,
       skipped: 0,
       duplicates: 0,
-      errors: []
+      errors: [],
+      newPropertiesCreated
     }
 
     // Get existing leads for duplicate detection
@@ -240,9 +343,20 @@ serve(async (req) => {
                 leadData.consent_ip = req.headers.get('x-forwarded-for') || 'import'
               }
               break
-            case 'notes':
-              if (!leadData.custom) leadData.custom = {}
-              leadData.custom.notes = value
+            default:
+              // Handle custom fields (format: custom.field_key)
+              if (crmField.startsWith('custom.')) {
+                const customKey = crmField.replace('custom.', '')
+                if (!leadData.custom) leadData.custom = {}
+                leadData.custom[customKey] = value
+                
+                // Increment usage count for this property
+                await supabase.rpc('increment_property_usage', {
+                  p_tenant_id: profile.tenant_id,
+                  p_entity: 'lead',
+                  p_key: customKey
+                }).catch(err => console.error('Failed to increment usage:', err))
+              }
               break
           }
         }
@@ -351,7 +465,9 @@ serve(async (req) => {
           field_mapping: fieldMapping,
           default_values: defaultValues,
           duplicate_handling: duplicateHandling,
-          imported_by: profile.full_name || user.email
+          imported_by: profile.full_name || user.email,
+          new_properties_created: newPropertiesCreated,
+          new_properties: newProperties?.map(p => ({ key: p.key, label: p.label, type: p.data_type }))
         }
       })
     } catch (logError) {
