@@ -242,6 +242,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fetchingProfileRef.current = userId;
       console.log("[AuthContext] fetchProfileAndRole starting for user:", userId);
 
+      // Validate session exists (non-blocking check)
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (!currentSession || currentSession.user.id !== userId) {
+          console.warn("[AuthContext] Session mismatch or expired during profile fetch");
+          throw new Error("Session validation failed");
+        }
+        console.log("[AuthContext] Session validated successfully");
+      } catch (sessionError) {
+        console.error("[AuthContext] Session validation error:", sessionError);
+        throw sessionError;
+      }
+
       // Fetch role and profile in parallel with 10s timeout for each
       console.log("[AuthContext] Fetching profile with role in single query...");
 
@@ -436,27 +449,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[AuthContext] Auth state changed:", event);
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        try {
-          await fetchProfileAndRole(session.user.id);
-        } catch (error) {
-          console.error("[AuthContext] Failed to fetch profile/role in auth state change:", error);
-          // Reset states on error
-          setProfile(null);
-          setTenant(null);
-          setRole(null);
-          setSubscriptionConfig(null);
-          setSubscriptionLoading(false);
-        } finally {
-          // Always set loading to false immediately - no setTimeout to prevent race conditions
-          console.log("[AuthContext] Setting loading to false");
-          setLoading(false);
-        }
+        // CRITICAL: Use setTimeout to defer profile fetch and prevent deadlock
+        // This breaks the synchronous chain and allows auth state to stabilize
+        setTimeout(() => {
+          fetchProfileAndRole(session.user.id)
+            .catch((error) => {
+              console.error("[AuthContext] Failed to fetch profile/role in auth state change:", error);
+              // Reset states on error
+              setProfile(null);
+              setTenant(null);
+              setRole(null);
+              setSubscriptionConfig(null);
+              setSubscriptionLoading(false);
+            })
+            .finally(() => {
+              console.log("[AuthContext] Setting loading to false");
+              setLoading(false);
+            });
+        }, 0);
       } else {
         setProfile(null);
         setTenant(null);
@@ -471,19 +487,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
+    console.log("[AuthContext] Login attempt starting...");
+    
+    // Clear all stale caches before login
+    sessionStorage.clear();
+    if (user?.id) {
+      localStorage.removeItem(`user_role_${user.id}`);
+    }
+    
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (authError) throw authError;
+    if (authError) {
+      console.error("[AuthContext] Login failed:", authError);
+      throw authError;
+    }
+
+    console.log("[AuthContext] Login successful, user:", authData.user?.id);
 
     if (authData.user) {
-      // Non-blocking: Start fetching profile/subscription in background
-      fetchProfileAndRole(authData.user.id).catch((err) => {
-        console.error("[AuthContext] Background profile fetch failed:", err);
-      });
-      // Login component navigates immediately - SubscriptionGuard handles loading states
+      // Add small delay to allow auth state to stabilize
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log("[AuthContext] Auth state stabilized");
+      // onAuthStateChange will trigger fetchProfileAndRole with setTimeout
     }
   };
 

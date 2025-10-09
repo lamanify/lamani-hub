@@ -72,7 +72,7 @@ export default function SubscriptionGuard({
     return <>{children}</>;
   }
 
-  // Show loading skeleton while authentication is in progress
+  // Show loading skeleton with progress indication while authentication is in progress
   if ((loading || (subscriptionLoading && requiresSubscription)) && !loadingTimeout) {
     return (
       <div className="min-h-screen bg-background p-8">
@@ -84,6 +84,13 @@ export default function SubscriptionGuard({
             ))}
           </div>
           <div className="h-64 bg-muted animate-pulse rounded-lg" />
+          <div className="flex justify-center mt-6">
+            <p className="text-sm text-muted-foreground">
+              {loading && !subscriptionLoading && "Verifying authentication..."}
+              {subscriptionLoading && "Loading account details..."}
+              {loading && subscriptionLoading && "Setting up your account..."}
+            </p>
+          </div>
         </div>
       </div>
     );
