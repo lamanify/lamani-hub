@@ -189,8 +189,23 @@ export function ImportLeadsModal() {
         return;
       }
 
-      const headers = data[selectedHeaderRow].map((h) => String(h || "").trim());
-      const rows = data.slice(selectedHeaderRow + 1).filter((row) => row.some((cell) => String(cell || "").trim()));
+      // Get all headers and track which indices have valid headers
+      const allHeaders = data[selectedHeaderRow].map((h) => String(h || "").trim());
+      const validIndices = allHeaders
+        .map((header, index) => (header ? index : -1))
+        .filter(index => index !== -1);
+
+      // Filter out empty headers
+      const headers = validIndices.map(index => allHeaders[index]);
+      
+      if (headers.length === 0) {
+        toast.error("No valid column headers found");
+        return;
+      }
+
+      // Filter rows to only include columns with valid headers
+      const allRows = data.slice(selectedHeaderRow + 1).filter((row) => row.some((cell) => String(cell || "").trim()));
+      const rows = allRows.map(row => validIndices.map(index => row[index]));
 
       if (rows.length === 0) {
         toast.error("No data rows found after header row");
