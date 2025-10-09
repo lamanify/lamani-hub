@@ -560,7 +560,7 @@ export default function Leads() {
                             <div className="flex items-center gap-2">
                               <span className="text-sm whitespace-nowrap">{formatPhone(lead.phone)}</span>
                               <div className="flex gap-1">
-                                <WhatsAppButton phone={lead.phone} variant="icon" />
+                                <WhatsAppButton phone={lead.phone} variant="default" size="sm" />
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button

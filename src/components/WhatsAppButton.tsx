@@ -88,7 +88,7 @@ export function WhatsAppButton({
                 variant === "icon" ? "text-green-600" : ""
               )}
             />
-            {variant === "default" && <span>Chat on WhatsApp</span>}
+            {variant === "default" && <span>WhatsApp</span>}
           </a>
         </Button>
       </TooltipTrigger>
