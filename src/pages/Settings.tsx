@@ -245,7 +245,10 @@ export default function Settings() {
     return <Badge variant="outline">{status}</Badge>;
   };
 
-  if (tenantLoading || !tenantData) {
+  // Super admins can access settings without tenant data
+  const isSuperAdmin = role === "super_admin";
+  
+  if (tenantLoading && !isSuperAdmin) {
     return (
       <DashboardLayout>
         <div className="space-y-6">
@@ -286,34 +289,38 @@ export default function Settings() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue="profile" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile">Clinic Profile</TabsTrigger>
-            <TabsTrigger value="pdpa">PDPA Compliance</TabsTrigger>
-            <TabsTrigger value="api">API Access</TabsTrigger>
+        <Tabs defaultValue={isSuperAdmin ? "security" : "profile"} className="space-y-6">
+          <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-2' : 'grid-cols-4'}`}>
+            {!isSuperAdmin && <TabsTrigger value="profile">Clinic Profile</TabsTrigger>}
+            {!isSuperAdmin && <TabsTrigger value="pdpa">PDPA Compliance</TabsTrigger>}
+            {!isSuperAdmin && <TabsTrigger value="api">API Access</TabsTrigger>}
             <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="account">Account</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Clinic Profile */}
-          <TabsContent value="profile" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Clinic Information</CardTitle>
-                <CardDescription>Basic information about your clinic</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Created on</p>
-                    <p className="font-medium">
-                      {formatDistanceToNow(new Date(tenantData.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Subscription Status</p>
-                    <div className="mt-1">{getSubscriptionBadge()}</div>
-                  </div>
-                </div>
+          {!isSuperAdmin && (
+            <TabsContent value="profile" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Clinic Information</CardTitle>
+                  <CardDescription>Basic information about your clinic</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {tenantData && (
+                    <div className="grid grid-cols-2 gap-4 p-4 bg-muted rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Created on</p>
+                        <p className="font-medium">
+                          {formatDistanceToNow(new Date(tenantData.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Subscription Status</p>
+                        <div className="mt-1">{getSubscriptionBadge()}</div>
+                      </div>
+                    </div>
+                  )}
 
                 <form
                   onSubmit={profileForm.handleSubmit((data) => saveProfileMutation.mutate(data))}
@@ -388,9 +395,11 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
           {/* Tab 2: PDPA Compliance */}
-          <TabsContent value="pdpa" className="space-y-6">
+          {!isSuperAdmin && (
+            <TabsContent value="pdpa" className="space-y-6">
             <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription>
@@ -501,9 +510,11 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
           {/* Tab 3: API Access */}
-          <TabsContent value="api" className="space-y-6">
+          {!isSuperAdmin && (
+            <TabsContent value="api" className="space-y-6">
             <Alert className="border-blue-200 bg-blue-50 dark:bg-blue-950">
               <Database className="h-4 w-4 text-blue-600" />
               <AlertDescription>
@@ -637,6 +648,7 @@ export default function Settings() {
               </Card>
             )}
           </TabsContent>
+          )}
 
           {/* Tab 4: Security */}
           <TabsContent value="security" className="space-y-6">
@@ -656,6 +668,48 @@ export default function Settings() {
             <ActiveSessionsManager />
 
             <SecurityLogViewer />
+          </TabsContent>
+
+          {/* Tab 5: Account */}
+          <TabsContent value="account" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Profile</CardTitle>
+                <CardDescription>Your personal information</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="account-fullName">Full Name</Label>
+                  <Input 
+                    id="account-fullName" 
+                    value={profile?.full_name || ""} 
+                    placeholder="Your Full Name"
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="account-email">Email Address</Label>
+                  <Input 
+                    id="account-email" 
+                    type="email" 
+                    value={user?.email || ""} 
+                    disabled 
+                    className="bg-muted" 
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <div>
+                    <Badge variant="outline" className="capitalize">
+                      {role?.replace("_", " ")}
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
