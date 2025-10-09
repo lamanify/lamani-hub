@@ -48,7 +48,7 @@ import { ImportLeadsModal } from "@/components/ImportLeadsModal";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { LeadCard } from "@/components/LeadCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhone } from "@/lib/formatPhone";
 import { formatDistanceToNow } from "date-fns";

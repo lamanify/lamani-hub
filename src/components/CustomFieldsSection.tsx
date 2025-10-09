@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { CustomFieldInput } from "@/components/CustomFieldInput";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";

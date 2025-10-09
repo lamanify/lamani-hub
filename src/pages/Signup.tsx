@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2, Database, MessageSquare, Shield, Clock, FileCheck, Upload } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { mapSupabaseAuthError } from "@/utils/authErrors";
 import logo from "@/assets/lamanify-logo.png";
 

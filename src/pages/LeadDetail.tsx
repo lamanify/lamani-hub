@@ -48,7 +48,7 @@ import { StatusBadge, type LeadStatus } from "@/components/StatusBadge";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabaseClient";
 import { useToast } from "@/hooks/use-toast";
 import { formatPhoneDisplay } from "@/lib/utils/phoneNormalizer";
 import { EditLeadModal } from "@/components/EditLeadModal";
