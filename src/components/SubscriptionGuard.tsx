@@ -53,7 +53,7 @@ export default function SubscriptionGuard({
       const timer = setTimeout(() => {
         console.error('[SubscriptionGuard] Loading timeout - taking too long');
         setLoadingTimeout(true);
-      }, 5000); // 5 second timeout
+      }, 20000); // 20 second timeout - allows AuthContext retry logic to complete
 
       return () => clearTimeout(timer);
     } else {
