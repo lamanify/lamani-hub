@@ -85,7 +85,7 @@ export default function Login() {
       toast.info("Password reset functionality will be available shortly.");
     });
   }, []);
-  return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 bg-slate-50">
+  return <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <img src={LOGO_URL} alt="Lamanify" className="mx-auto h-12 w-auto mb-4" loading="eager" // Ensure logo loads immediately
