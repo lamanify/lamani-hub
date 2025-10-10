@@ -4,19 +4,18 @@ import { Users, ShieldCheck, Settings, Upload, CreditCard, Smile } from "lucide-
 import { useAuth } from "@/contexts/AuthContext";
 import PublicTopBar from "@/components/PublicTopBar";
 import logo from "@/assets/lamanify-logo.png";
-
 export default function Landing() {
-  const { user } = useAuth();
-
-  return (
-    <div className="min-h-screen bg-background">
+  const {
+    user
+  } = useAuth();
+  return <div className="min-h-screen bg-background">
       <PublicTopBar />
       
       <main>
         {/* Hero Section */}
         <section className="py-20 md:py-28 text-center">
           <div className="container mx-auto px-6">
-            <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-4">
+            <h1 className="text-4xl leading-tight mb-4 text-center font-bold md:text-6xl">
               Stop Juggling Spreadsheets. <br className="hidden md:block" /> 
               Start <span className="text-primary">Growing Your Clinic.</span>
             </h1>
@@ -28,19 +27,13 @@ export default function Landing() {
               <Button asChild size="lg" className="w-full sm:w-auto">
                 <Link to="/signup">Start Your 14-Day Free Trial</Link>
               </Button>
-              {user && (
-                <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
-                  <Link to="/dashboard">Go to Dashboard</Link>
-                </Button>
-              )}
+              {user && <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+                  
+                </Button>}
             </div>
             <p className="text-sm text-muted-foreground mt-3">No credit card required.</p>
             <div className="mt-16">
-              <img 
-                src="https://placehold.co/1200x600/e8e8e8/333?text=LamaniHub+Dashboard+Mockup" 
-                alt="LamaniHub Dashboard" 
-                className="w-full h-auto max-w-5xl mx-auto rounded-lg shadow-2xl"
-              />
+              <img src="https://placehold.co/1200x600/e8e8e8/333?text=LamaniHub+Dashboard+Mockup" alt="LamaniHub Dashboard" className="w-full h-auto max-w-5xl mx-auto rounded-lg shadow-2xl" />
             </div>
           </div>
         </section>
@@ -129,11 +122,7 @@ export default function Landing() {
         <section id="compliance" className="py-20">
           <div className="container mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
             <div className="text-center md:text-left order-2 md:order-1">
-              <img 
-                src="https://placehold.co/500x500/e8e8e8/333?text=PDPA+Compliant" 
-                alt="PDPA Compliance" 
-                className="mx-auto rounded-lg shadow-xl"
-              />
+              <img src="https://placehold.co/500x500/e8e8e8/333?text=PDPA+Compliant" alt="PDPA Compliance" className="mx-auto rounded-lg shadow-xl" />
             </div>
             <div className="order-1 md:order-2">
               <p className="text-primary font-semibold mb-2">BUILT FOR MALAYSIA</p>
@@ -306,6 +295,5 @@ export default function Landing() {
           <p>&copy; 2025 LamaniHub. All Rights Reserved.</p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 }
