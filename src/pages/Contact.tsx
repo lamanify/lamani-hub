@@ -1,58 +1,76 @@
 import PublicTopBar from "@/components/PublicTopBar";
 import PublicFooter from "@/components/PublicFooter";
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Mail, Phone, MapPin } from "lucide-react";
 
 export default function Contact() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[hsl(220,20%,97%)]">
       <PublicTopBar />
       
-      <main className="container mx-auto px-6 py-20">
-        <div className="max-w-3xl mx-auto">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">Contact Us</h1>
-            <p className="text-xl text-muted-foreground">
-              Get in touch with the LamaniHub team.
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="text-center p-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
-                <Mail className="h-6 w-6" />
-              </div>
-              <h3 className="font-semibold mb-2">Email</h3>
-              <p className="text-muted-foreground">hello@lamanihub.com</p>
+      <main>
+        <section className="min-h-screen flex items-center justify-center py-20 px-6">
+          <div className="w-full max-w-[1100px]">
+            {/* Header Section */}
+            <div className="text-center max-w-3xl mx-auto">
+              <span className="inline-block mb-3 px-3 py-1 bg-primary/10 text-primary rounded-full text-sm font-medium uppercase tracking-wide">
+                Get In Touch
+              </span>
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
+                We'd Love to <span className="text-primary">Hear</span> From You
+              </h1>
+              <p className="mt-4 text-muted-foreground leading-relaxed">
+                Whether you have a question about features, trials, pricing, or anything else, our team is ready to answer all your questions.
+              </p>
             </div>
-            
-            <div className="text-center p-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
-                <Phone className="h-6 w-6" />
+
+            {/* Contact Info Section */}
+            <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+              
+              {/* Email Card */}
+              <div className="bg-white p-8 text-center rounded-lg border border-[#ececec] shadow-sm">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-primary/10">
+                  <Mail className="w-8 h-8 text-primary" strokeWidth={2} />
+                </div>
+                <h3 className="mt-5 text-xl font-medium text-foreground">Email Us At</h3>
+                <a 
+                  href="mailto:support@lamanihub.com" 
+                  className="mt-2 text-base text-primary font-medium break-all inline-block hover:underline"
+                >
+                  support@lamanihub.com
+                </a>
               </div>
-              <h3 className="font-semibold mb-2">Phone</h3>
-              <p className="text-muted-foreground">+60 3 1234 5678</p>
-            </div>
-            
-            <div className="text-center p-6">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 text-primary mb-4">
-                <MapPin className="h-6 w-6" />
+
+              {/* Address Card */}
+              <div className="bg-white p-8 text-center rounded-lg border border-[#ececec] shadow-sm">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-primary/10">
+                  <MapPin className="w-8 h-8 text-primary" strokeWidth={2} />
+                </div>
+                <h3 className="mt-5 text-xl font-medium text-foreground">Address</h3>
+                <p className="mt-2 text-base text-muted-foreground leading-relaxed">
+                  Level 23-1, Premier Suite,<br />
+                  One Mont Kiara,<br />
+                  1 Jln Kiara, Mont Kiara,<br />
+                  50480 Kuala Lumpur
+                </p>
               </div>
-              <h3 className="font-semibold mb-2">Location</h3>
-              <p className="text-muted-foreground">Kuala Lumpur, Malaysia</p>
+
+              {/* Customer Service Card */}
+              <div className="bg-white p-8 text-center rounded-lg border border-[#ececec] shadow-sm">
+                <div className="flex items-center justify-center w-16 h-16 mx-auto rounded-full bg-primary/10">
+                  <Phone className="w-8 h-8 text-primary" strokeWidth={2} />
+                </div>
+                <h3 className="mt-5 text-xl font-medium text-foreground">Customer Service</h3>
+                <a 
+                  href="tel:+601156706510" 
+                  className="mt-2 text-base text-muted-foreground block hover:text-primary transition-colors"
+                >
+                  +6011-5670 6510
+                </a>
+              </div>
+
             </div>
           </div>
-          
-          <div className="text-center">
-            <p className="text-muted-foreground mb-6">
-              Full contact form and support options coming soon.
-            </p>
-            <Button asChild>
-              <Link to="/">Back to Home</Link>
-            </Button>
-          </div>
-        </div>
+        </section>
       </main>
       
       <PublicFooter />
