@@ -18,11 +18,9 @@ export default function PublicFooter() {
         <div>
           <h4 className="font-semibold text-black mb-4">Product</h4>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/#features" className="hover:text-black transition-colors">Features</Link></li>
-            <li><Link to="/#pricing" className="hover:text-black transition-colors">Pricing</Link></li>
-            <li><Link to="/#compliance" className="hover:text-black transition-colors">PDPA Compliance</Link></li>
-            <li><Link to="/product" className="hover:text-black transition-colors">Security</Link></li>
-            <li><Link to="/help" className="hover:text-black transition-colors">Help Center</Link></li>
+            <li><Link to="/how-it-works" className="hover:text-black transition-colors">How It Works</Link></li>
+            <li><Link to="/pricing" className="hover:text-black transition-colors">Pricing</Link></li>
+            <li><Link to="/help" className="hover:text-black transition-colors">User Guide</Link></li>
           </ul>
         </div>
         
@@ -30,6 +28,7 @@ export default function PublicFooter() {
         <div>
           <h4 className="font-semibold text-black mb-4">Company</h4>
           <ul className="space-y-2 text-sm">
+            <li><Link to="/" className="hover:text-black transition-colors">Home</Link></li>
             <li><Link to="/about" className="hover:text-black transition-colors">About Us</Link></li>
             <li><Link to="/contact" className="hover:text-black transition-colors">Contact Us</Link></li>
             <li><Link to="/privacy" className="hover:text-black transition-colors">Privacy Policy</Link></li>
@@ -41,9 +40,9 @@ export default function PublicFooter() {
         <div>
           <h4 className="font-semibold text-black mb-4">Contact</h4>
           <ul className="space-y-2 text-sm">
-            <li>hello@lamanihub.com</li>
-            <li>+60 3 1234 5678</li>
-            <li>Kuala Lumpur, Malaysia</li>
+            <li>support@lamanihub.com</li>
+            <li>+6011-5670 6510</li>
+            <li>Mont Kiara, Kuala Lumpur, MY</li>
           </ul>
         </div>
       </div>

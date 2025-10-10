@@ -17,16 +17,6 @@ export default function PublicTopBar() {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
-  const scrollToSection = (id: string) => {
-    setIsOpen(false);
-    setTimeout(() => {
-      const element = document.getElementById(id);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 100);
-  };
-
   return (
     <header className="bg-background border-b sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-6">
@@ -38,42 +28,38 @@ export default function PublicTopBar() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <button
-              onClick={() => scrollToSection("features")}
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              Features
-            </button>
-            <button
-              onClick={() => scrollToSection("pricing")}
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              Pricing
-            </button>
-            <button
-              onClick={() => scrollToSection("compliance")}
-              className="text-muted-foreground hover:text-primary transition-colors"
-            >
-              Compliance
-            </button>
-            <Link to="/help" className="text-muted-foreground hover:text-primary transition-colors">
-              Help Center
+            <Link to="/" className="text-muted-foreground hover:text-primary transition-colors">
+              Home
             </Link>
-            <Link to="/login" className="text-muted-foreground hover:text-primary transition-colors">
-              Login
+            <Link to="/how-it-works" className="text-muted-foreground hover:text-primary transition-colors">
+              How It Works
+            </Link>
+            <Link to="/pricing" className="text-muted-foreground hover:text-primary transition-colors">
+              Pricing
+            </Link>
+            <Link to="/help" className="text-muted-foreground hover:text-primary transition-colors">
+              User Guide
+            </Link>
+            <Link to="/about" className="text-muted-foreground hover:text-primary transition-colors">
+              About
             </Link>
           </nav>
 
           {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-3">
             {user ? (
               <Button asChild>
                 <Link to="/dashboard">Back to Dashboard</Link>
               </Button>
             ) : (
-              <Button asChild>
-                <Link to="/signup">Start Free Trial</Link>
-              </Button>
+              <>
+                <Button asChild variant="outline">
+                  <Link to="/login">Log in</Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/signup">Start Free Today</Link>
+                </Button>
+              </>
             )}
           </div>
 
@@ -89,39 +75,42 @@ export default function PublicTopBar() {
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
               <nav className="flex flex-col space-y-4 mt-6">
-                <button
-                  onClick={() => scrollToSection("features")}
-                  className="text-left text-muted-foreground hover:text-primary transition-colors py-2"
+                <Link
+                  to="/"
+                  className="text-muted-foreground hover:text-primary transition-colors py-2"
+                  onClick={() => setIsOpen(false)}
                 >
-                  Features
-                </button>
-                <button
-                  onClick={() => scrollToSection("pricing")}
-                  className="text-left text-muted-foreground hover:text-primary transition-colors py-2"
+                  Home
+                </Link>
+                <Link
+                  to="/how-it-works"
+                  className="text-muted-foreground hover:text-primary transition-colors py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  How It Works
+                </Link>
+                <Link
+                  to="/pricing"
+                  className="text-muted-foreground hover:text-primary transition-colors py-2"
+                  onClick={() => setIsOpen(false)}
                 >
                   Pricing
-                </button>
-                <button
-                  onClick={() => scrollToSection("compliance")}
-                  className="text-left text-muted-foreground hover:text-primary transition-colors py-2"
-                >
-                  Compliance
-                </button>
+                </Link>
                 <Link
                   to="/help"
                   className="text-muted-foreground hover:text-primary transition-colors py-2"
                   onClick={() => setIsOpen(false)}
                 >
-                  Help Center
+                  User Guide
                 </Link>
                 <Link
-                  to="/login"
+                  to="/about"
                   className="text-muted-foreground hover:text-primary transition-colors py-2"
                   onClick={() => setIsOpen(false)}
                 >
-                  Login
+                  About
                 </Link>
-                <div className="pt-4 border-t">
+                <div className="pt-4 border-t space-y-2">
                   {user ? (
                     <Button asChild className="w-full">
                       <Link to="/dashboard" onClick={() => setIsOpen(false)}>
@@ -129,11 +118,18 @@ export default function PublicTopBar() {
                       </Link>
                     </Button>
                   ) : (
-                    <Button asChild className="w-full">
-                      <Link to="/signup" onClick={() => setIsOpen(false)}>
-                        Start Free Trial
-                      </Link>
-                    </Button>
+                    <>
+                      <Button asChild variant="outline" className="w-full">
+                        <Link to="/login" onClick={() => setIsOpen(false)}>
+                          Log in
+                        </Link>
+                      </Button>
+                      <Button asChild className="w-full">
+                        <Link to="/signup" onClick={() => setIsOpen(false)}>
+                          Start Free Today
+                        </Link>
+                      </Button>
+                    </>
                   )}
                 </div>
               </nav>

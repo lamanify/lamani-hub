@@ -10,7 +10,8 @@ import { NetworkError } from "@/components/NetworkError";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-import Product from "./pages/Product";
+import Pricing from "./pages/Pricing";
+import HowItWorks from "./pages/HowItWorks";
 import Dashboard from "./pages/Dashboard";
 import Leads from "./pages/Leads";
 import Settings from "./pages/Settings";
@@ -57,7 +58,8 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/product" element={<Product />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
