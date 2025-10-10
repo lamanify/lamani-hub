@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { format } from "date-fns";
+import { InvoiceHistory } from "@/components/InvoiceHistory";
 
 export default function Billing() {
   const {
@@ -586,22 +587,27 @@ export default function Billing() {
           <CardContent>{renderSubscriptionContent()}</CardContent>
         </Card>
 
-        {/* Payment Method Card (for active subscriptions) */}
-        {tenant?.subscription_status === "active" && (
+        {/* Invoice History Card */}
+        {(tenant?.subscription_status === "active" ||
+          tenant?.subscription_status === "past_due" ||
+          tenant?.subscription_status === "cancelled" ||
+          tenant?.subscription_status === "canceled" ||
+          tenant?.subscription_status === "suspended") && (
           <Card>
             <CardHeader>
-              <CardTitle>Payment Method</CardTitle>
-              <CardDescription>Manage your payment methods and billing information</CardDescription>
+              <CardTitle>Invoice History</CardTitle>
+              <CardDescription>View and download your past invoices</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center justify-center py-8">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
-                  <CreditCard className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <p className="text-muted-foreground mb-4 text-center">
-                  View and update your payment methods through the billing portal
-                </p>
-                <Button variant="outline" onClick={handleManageBilling} disabled={portalLoading}>
+              <InvoiceHistory />
+
+              <div className="mt-6 pt-6 border-t">
+                <Button
+                  variant="outline"
+                  onClick={handleManageBilling}
+                  disabled={portalLoading}
+                  className="w-full"
+                >
                   {portalLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -609,7 +615,7 @@ export default function Billing() {
                     </>
                   ) : (
                     <>
-                      Open Billing Portal
+                      Manage Payment Methods
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </>
                   )}
