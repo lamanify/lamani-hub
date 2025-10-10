@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
-import { FileText, Download, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
+import { FileText, Download, CheckCircle, Clock, XCircle, AlertCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -162,21 +162,39 @@ export const InvoiceHistory = () => {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            asChild
-            className="ml-4"
-          >
-            <a
-              href={invoice.invoice_pdf}
-              target="_blank"
-              rel="noopener noreferrer"
+          {invoice.invoice_pdf ? (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="ml-4"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </a>
-          </Button>
+              <a
+                href={invoice.invoice_pdf}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </a>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="ml-4"
+            >
+              <a
+                href={invoice.hosted_invoice_url}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4 mr-2" />
+                View Invoice
+              </a>
+            </Button>
+          )}
         </div>
       ))}
     </div>
