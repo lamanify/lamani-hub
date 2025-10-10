@@ -1,4 +1,5 @@
 import PublicTopBar from "@/components/PublicTopBar";
+import PublicFooter from "@/components/PublicFooter";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, MapPin } from "lucide-react";
@@ -54,13 +55,7 @@ export default function Contact() {
         </div>
       </main>
       
-      <footer className="border-t border-border py-8 mt-20">
-        <div className="container mx-auto px-6 text-center">
-          <p className="text-sm text-muted-foreground">
-            © 2025 LamaniHub. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

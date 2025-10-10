@@ -1,4 +1,5 @@
 import PublicTopBar from "@/components/PublicTopBar";
+import PublicFooter from "@/components/PublicFooter";
 import { Link } from "react-router-dom";
 import { Plus, Shield, DollarSign, MapPin } from "lucide-react";
 
@@ -146,6 +147,8 @@ export default function About() {
           </div>
         </section>
       </main>
+      
+      <PublicFooter />
     </div>
   );
 }

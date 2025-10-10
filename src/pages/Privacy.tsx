@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import PublicTopBar from "@/components/PublicTopBar";
+import PublicFooter from "@/components/PublicFooter";
 
 export default function Privacy() {
   return (
@@ -95,6 +96,8 @@ export default function Privacy() {
           </div>
         </div>
       </div>
+      
+      <PublicFooter />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Star, Users, Shield, Calendar, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PublicTopBar from '@/components/PublicTopBar';
+import PublicFooter from '@/components/PublicFooter';
 const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 const ProductPage = () => {
   const features = [{
@@ -207,7 +208,7 @@ const ProductPage = () => {
       </section>
 
       {/* Footer */}
-      
+      <PublicFooter />
     </div>;
 };
 export default ProductPage;

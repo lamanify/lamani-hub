@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import PublicTopBar from "@/components/PublicTopBar";
+import PublicFooter from "@/components/PublicFooter";
 
 const HelpCenter = () => {
   const [activeTab, setActiveTab] = useState('getting-started');
@@ -249,6 +250,8 @@ const HelpCenter = () => {
           </div>
         </div>
       </main>
+      
+      <PublicFooter />
     </div>
   );
 };
