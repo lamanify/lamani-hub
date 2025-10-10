@@ -17,33 +17,35 @@ const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.
 
 // Lazy load ForgotPasswordDialog for better performance
 const ForgotPasswordDialog = lazy(() => import("@/components/ForgotPasswordDialog"));
-
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().optional(),
+  rememberMe: z.boolean().optional()
 });
-
 type LoginFormData = z.infer<typeof loginSchema>;
-
 export default function Login() {
   const navigate = useNavigate();
-  const { user, login } = useAuth();
+  const {
+    user,
+    login
+  } = useAuth();
 
   // Optimized form configuration with onBlur validation
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    mode: "onBlur", // Only validate on blur for better UX
+    mode: "onBlur",
+    // Only validate on blur for better UX
     defaultValues: {
       email: "",
       password: "",
-      rememberMe: false,
-    },
+      rememberMe: false
+    }
   });
-
   const {
     handleSubmit,
-    formState: { isSubmitting },
+    formState: {
+      isSubmitting
+    }
   } = form;
 
   // Smart auto-redirect logic
@@ -51,51 +53,43 @@ export default function Login() {
     if (user) {
       // Set login success flag for dashboard toast
       sessionStorage.setItem("just_logged_in", "true");
-      navigate("/dashboard", { replace: true });
+      navigate("/dashboard", {
+        replace: true
+      });
     }
   }, [user, navigate]);
 
   // Optimized login handler with immediate navigation
-  const handleLogin = useCallback(
-    async (data: LoginFormData) => {
-      try {
-        await login(data.email.trim(), data.password);
-        // Navigation happens via the useMemo above when user state updates
-      } catch (error: any) {
-        const mappedError = mapSupabaseAuthError(error, "signin");
-
-        if (mappedError.field) {
-          form.setError(mappedError.field, {
-            type: "server",
-            message: mappedError.message,
-          });
-        } else {
-          toast.error(mappedError.message);
-        }
+  const handleLogin = useCallback(async (data: LoginFormData) => {
+    try {
+      await login(data.email.trim(), data.password);
+      // Navigation happens via the useMemo above when user state updates
+    } catch (error: any) {
+      const mappedError = mapSupabaseAuthError(error, "signin");
+      if (mappedError.field) {
+        form.setError(mappedError.field, {
+          type: "server",
+          message: mappedError.message
+        });
+      } else {
+        toast.error(mappedError.message);
       }
-    },
-    [login, form],
-  );
+    }
+  }, [login, form]);
 
   // Memoized forgot password handler
   const handleForgotPassword = useCallback(() => {
     // Dynamically import and show forgot password dialog
-    import("@/components/ForgotPasswordDialog").then((module) => {
+    import("@/components/ForgotPasswordDialog").then(module => {
       // Handle forgotten password logic here
       toast.info("Password reset functionality will be available shortly.");
     });
   }, []);
-
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+  return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 bg-slate-50">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <img
-            src={LOGO_URL}
-            alt="Lamanify"
-            className="mx-auto h-12 w-auto mb-4"
-            loading="eager" // Ensure logo loads immediately
-          />
+          <img src={LOGO_URL} alt="Lamanify" className="mx-auto h-12 w-auto mb-4" loading="eager" // Ensure logo loads immediately
+        />
           <h1 className="text-2xl font-bold text-gray-900">Sign in to your account</h1>
           <p className="mt-2 text-sm text-gray-600">Welcome back! Please sign in to continue.</p>
         </div>
@@ -108,86 +102,49 @@ export default function Login() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={handleSubmit(handleLogin)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
+                <FormField control={form.control} name="email" render={({
+                field
+              }) => <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          type="email"
-                          placeholder="Enter your email"
-                          autoComplete="email"
-                          autoFocus // Focus on email field for better UX
-                          disabled={isSubmitting}
-                        />
+                        <Input {...field} type="email" placeholder="Enter your email" autoComplete="email" autoFocus // Focus on email field for better UX
+                  disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </FormItem>} />
 
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
+                <FormField control={form.control} name="password" render={({
+                field
+              }) => <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input
-                          {...field}
-                          type="password"
-                          placeholder="Enter your password"
-                          autoComplete="current-password"
-                          disabled={isSubmitting}
-                        />
+                        <Input {...field} type="password" placeholder="Enter your password" autoComplete="current-password" disabled={isSubmitting} />
                       </FormControl>
                       <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                    </FormItem>} />
 
                 <div className="flex items-center justify-between">
-                  <FormField
-                    control={form.control}
-                    name="rememberMe"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormField control={form.control} name="rememberMe" render={({
+                  field
+                }) => <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                         <FormControl>
                           <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isSubmitting} />
                         </FormControl>
                         <div className="space-y-1 leading-none">
                           <FormLabel className="text-sm font-normal cursor-pointer">Remember me</FormLabel>
                         </div>
-                      </FormItem>
-                    )}
-                  />
+                      </FormItem>} />
 
-                  <button
-                    type="button"
-                    onClick={handleForgotPassword}
-                    className="text-sm text-primary hover:underline"
-                    disabled={isSubmitting}
-                  >
+                  <button type="button" onClick={handleForgotPassword} className="text-sm text-primary hover:underline" disabled={isSubmitting}>
                     Forgot password?
                   </button>
                 </div>
 
-                <Button
-                  type="submit"
-                  className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-medium py-2" disabled={isSubmitting}>
+                  {isSubmitting ? <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
+                    </> : "Sign In"}
                 </Button>
               </form>
             </Form>
@@ -203,6 +160,5 @@ export default function Login() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }
