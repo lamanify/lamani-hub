@@ -61,6 +61,7 @@ interface AuthContextType {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   refreshSubscription: () => Promise<void>;
+  handleAuthError: (error: any) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -566,6 +567,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const handleAuthError = async (error: any) => {
+    // Check if error is authentication related
+    const isAuthError = 
+      error?.status === 401 || 
+      error?.status === 403 || 
+      error?.message?.includes("Session") ||
+      error?.message?.includes("session") ||
+      error?.message?.includes("Unauthorized") ||
+      error?.message?.includes("Not authenticated") ||
+      error?.message?.includes("JWT");
+
+    if (isAuthError) {
+      console.log("[AuthContext] Auth error detected, logging out user:", error?.message);
+      await logout();
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -584,6 +602,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         resetPassword,
         refreshSubscription,
+        handleAuthError,
       }}
     >
       {children}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { FileText, Download, CheckCircle, Clock, XCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ interface Invoice {
 }
 
 export const InvoiceHistory = () => {
+  const { handleAuthError } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +45,10 @@ export const InvoiceHistory = () => {
         }
 
         setInvoices(data.invoices || []);
-      } catch (err) {
-        console.error("Failed to fetch invoices:", err);
-        setError(err instanceof Error ? err.message : "Failed to load invoices");
+      } catch (err: any) {
+        console.error("Error fetching invoices:", err);
+        await handleAuthError(err);
+        setError(err.message || "Failed to load invoices");
       } finally {
         setLoading(false);
       }
