@@ -24,6 +24,9 @@ import NotFound from "./pages/NotFound";
 import LeadDetail from "./pages/LeadDetail";
 import FieldsManager from "./pages/FieldsManager";
 import Onboarding from "./pages/Onboarding";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Terms from "./pages/Terms";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +58,9 @@ const App = () => (
             <Route path="/signup" element={<Signup />} />
             <Route path="/product" element={<Product />} />
             <Route path="/privacy" element={<Privacy />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={
               <SubscriptionGuard requiresSubscription={false}>
