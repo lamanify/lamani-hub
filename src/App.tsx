@@ -27,6 +27,7 @@ import Onboarding from "./pages/Onboarding";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
+import HelpCenter from "./pages/HelpCenter";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/terms" element={<Terms />} />
+            <Route path="/help" element={<HelpCenter />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={
               <SubscriptionGuard requiresSubscription={false}>

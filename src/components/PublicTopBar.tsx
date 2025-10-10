@@ -55,6 +55,9 @@ export default function PublicTopBar() {
             >
               Compliance
             </button>
+            <Link to="/help" className="text-muted-foreground hover:text-primary transition-colors">
+              Help Center
+            </Link>
             <Link to="/login" className="text-muted-foreground hover:text-primary transition-colors">
               Login
             </Link>
@@ -103,6 +106,13 @@ export default function PublicTopBar() {
                 >
                   Compliance
                 </button>
+                <Link
+                  to="/help"
+                  className="text-muted-foreground hover:text-primary transition-colors py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Help Center
+                </Link>
                 <Link
                   to="/login"
                   className="text-muted-foreground hover:text-primary transition-colors py-2"

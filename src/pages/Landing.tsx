@@ -277,6 +277,7 @@ export default function Landing() {
               <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
               <li><a href="#compliance" className="hover:text-white transition-colors">PDPA Compliance</a></li>
               <li><Link to="/product" className="hover:text-white transition-colors">Security</Link></li>
+              <li><Link to="/help" className="hover:text-white transition-colors">Help Center</Link></li>
             </ul>
           </div>
           
