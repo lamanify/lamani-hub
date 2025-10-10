@@ -159,6 +159,22 @@ serve(async (req) => {
 
     console.log("Is existing trial/paying user:", isExistingTrialUser, "Status:", tenant.subscription_status);
 
+    // Build subscription_data conditionally
+    const subscriptionData: {
+      metadata: { tenant_id: string };
+      trial_period_days?: number;
+    } = {
+      metadata: {
+        tenant_id: tenantId,
+      },
+    };
+
+    // Only add trial_period_days for brand new users
+    if (!isExistingTrialUser) {
+      subscriptionData.trial_period_days = 14;
+    }
+    // For existing users: omit trial_period_days entirely (Stripe will start subscription immediately)
+
     // Create Checkout Session
     console.log("Creating checkout session for customer:", customerId);
     const session = await stripe.checkout.sessions.create({
@@ -175,14 +191,7 @@ serve(async (req) => {
       metadata: {
         tenant_id: tenantId,
       },
-      subscription_data: {
-        metadata: {
-          tenant_id: tenantId,
-        },
-        // Only give trial to completely new users (inactive status)
-        // Skip trial for users upgrading from trial or reactivating
-        trial_period_days: isExistingTrialUser ? 0 : 14,
-      },
+      subscription_data: subscriptionData,
       allow_promotion_codes: true,
       billing_address_collection: "required",
     });
@@ -191,7 +200,7 @@ serve(async (req) => {
       "Checkout session created:",
       session.id,
       "with trial days:",
-      isExistingTrialUser ? 0 : 14,
+      isExistingTrialUser ? "none (immediate charge)" : 14,
       "for status:",
       tenant.subscription_status,
     );
