@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2 } from 'lucide-react';
-import logo from '@/assets/lamanify-logo.png';
+const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -50,7 +50,7 @@ export default function ResetPassword() {
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
-          <img src={logo} alt="LamaniHub" className="h-12 mx-auto" />
+          <img src={LOGO_URL} alt="LamaniHub" className="h-12 mx-auto" />
         </div>
 
         <Card>

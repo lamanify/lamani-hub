@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle, Star, Users, Shield, Calendar, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PublicTopBar from '@/components/PublicTopBar';
-import logo from "@/assets/lamanify-logo.png";
+const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 const ProductPage = () => {
   const features = [{
     icon: <Users className="h-8 w-8 text-primary" />,

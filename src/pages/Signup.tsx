@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { Loader2, Database, MessageSquare, Shield, Clock, FileCheck, Upload } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { mapSupabaseAuthError } from "@/utils/authErrors";
-import logo from "@/assets/lamanify-logo.png";
+const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 
 const signupSchema = z.object({
   clinicName: z.string().min(2, "Clinic name must be at least 2 characters"),
@@ -291,7 +291,7 @@ export default function Signup() {
       <div className="lg:w-1/2 bg-gray-50 p-8 lg:p-12 flex flex-col justify-center">
         <div className="max-w-xl mx-auto">
           <Link to="/" className="inline-block mb-8">
-            <img src={logo} alt="LamaniHub" className="h-10" />
+            <img src={LOGO_URL} alt="LamaniHub" className="h-10" />
           </Link>
           <h1 className="text-4xl lg:text-5xl font-bold text-foreground mb-4">Transform Your Healthcare Practice</h1>
           <p className="text-lg text-muted-foreground mb-12">

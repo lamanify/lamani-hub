@@ -22,7 +22,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { cn } from "@/lib/utils";
-import logo from "@/assets/lamanify-logo.png";
+const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 import { useAuth } from "@/contexts/AuthContext";
 import TrialBanner from "../TrialBanner";
 import PastDueBanner from "../PastDueBanner";
@@ -87,7 +87,7 @@ const SidebarContent = () => {
       {/* Logo */}
       <div className="flex items-center h-16 px-6 border-b border-border">
         <Link to="/dashboard" className="flex items-center">
-          <img src={logo} alt="LamaniHub" className="h-8" />
+          <img src={LOGO_URL} alt="LamaniHub" className="h-8" />
         </Link>
       </div>
 

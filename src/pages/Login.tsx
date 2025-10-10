@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { mapSupabaseAuthError } from "@/utils/authErrors";
 import { Loader2 } from "lucide-react";
-import logo from "@/assets/lamanify-logo.png";
+const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 
 // Lazy load ForgotPasswordDialog for better performance
 const ForgotPasswordDialog = lazy(() => import("@/components/ForgotPasswordDialog"));
@@ -91,7 +91,7 @@ export default function Login() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <img
-            src={logo}
+            src={LOGO_URL}
             alt="Lamanify"
             className="mx-auto h-12 w-auto mb-4"
             loading="eager" // Ensure logo loads immediately

@@ -10,7 +10,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import logo from "@/assets/lamanify-logo.png";
+
+const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 
 export default function PublicTopBar() {
   const { user } = useAuth();
@@ -31,7 +32,7 @@ export default function PublicTopBar() {
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
-            <img src={logo} alt="LamaniHub" className="h-8 w-auto" />
+            <img src={LOGO_URL} alt="LamaniHub" className="h-8 w-auto" />
             <span className="ml-2 text-xl font-bold text-foreground">LamaniHub</span>
           </Link>
 
