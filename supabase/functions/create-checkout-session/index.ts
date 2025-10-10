@@ -80,7 +80,7 @@ serve(async (req) => {
     // Get tenant information
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('id, name, stripe_customer_id')
+      .select('id, name, stripe_customer_id, subscription_status')
       .eq('id', tenantId)
       .single();
 
@@ -145,6 +145,18 @@ serve(async (req) => {
     // Get origin for redirect URLs
     const origin = req.headers.get('origin') || 'http://localhost:8080';
 
+    // Determine if a trial should be applied
+    const isExistingTrialUser = 
+      tenant.subscription_status === 'trial' || 
+      tenant.subscription_status === 'trialing' ||
+      tenant.subscription_status === 'past_due' ||
+      tenant.subscription_status === 'suspended' ||
+      tenant.subscription_status === 'cancelled' ||
+      tenant.subscription_status === 'canceled' ||
+      tenant.subscription_status === 'active';
+
+    console.log('Is existing trial/paying user:', isExistingTrialUser, 'Status:', tenant.subscription_status);
+
     // Create Checkout Session
     console.log('Creating checkout session for customer:', customerId);
     const session = await stripe.checkout.sessions.create({
@@ -165,13 +177,15 @@ serve(async (req) => {
         metadata: {
           tenant_id: tenantId,
         },
-        trial_period_days: 14,
+        // Only give trial to completely new users (inactive status)
+        // Skip trial for users upgrading from trial or reactivating
+        trial_period_days: isExistingTrialUser ? 0 : 14,
       },
       allow_promotion_codes: true,
       billing_address_collection: 'required',
     });
 
-    console.log('Checkout session created:', session.id);
+    console.log('Checkout session created:', session.id, 'with trial days:', isExistingTrialUser ? 0 : 14, 'for status:', tenant.subscription_status);
 
     // Return checkout URL
     return new Response(
