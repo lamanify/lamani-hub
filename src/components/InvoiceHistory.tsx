@@ -144,7 +144,7 @@ export const InvoiceHistory = () => {
       {invoices.map((invoice) => (
         <div
           key={invoice.id}
-          className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
+          className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
         >
           <div className="flex items-center gap-4 flex-1">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
