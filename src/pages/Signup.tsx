@@ -134,6 +134,13 @@ export default function Signup() {
       try {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        // Validate environment variables are loaded
+        if (!supabaseUrl || !supabaseKey) {
+          console.error('Environment variables not loaded:', { supabaseUrl, supabaseKey });
+          throw new Error('Configuration error: Environment variables not loaded. Please refresh the page and try again.');
+        }
+        
         const response = await withTimeout(
           fetch(`${supabaseUrl}/functions/v1/signup-with-tenant`, {
             method: "POST",
@@ -150,7 +157,16 @@ export default function Signup() {
           }),
           15000,
         );
-        const result = await response.json();
+        
+        // Parse response with error handling
+        let result;
+        try {
+          const text = await response.text();
+          result = text ? JSON.parse(text) : {};
+        } catch (parseError) {
+          console.error('Failed to parse response:', parseError);
+          throw new Error('Invalid response from server. Please try again.');
+        }
 
         if (!response.ok) {
           // Edge function error
