@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { mapSupabaseAuthError } from "@/utils/authErrors";
 const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 
+# test 
 const signupSchema = z.object({
   clinicName: z.string().min(2, "Clinic name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
