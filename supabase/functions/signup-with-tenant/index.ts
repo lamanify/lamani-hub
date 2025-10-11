@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import * as bcrypt from "jsr:@da/bcrypt@1.0.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
