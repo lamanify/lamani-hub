@@ -29,6 +29,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import Terms from "./pages/Terms";
 import HelpCenter from "./pages/HelpCenter";
+import ApiDocs from "./pages/ApiDocs";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/contact" element={<Contact />} />
             <Route path="/terms" element={<Terms />} />
             <Route path="/help" element={<HelpCenter />} />
+            <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/onboarding" element={
               <SubscriptionGuard requiresSubscription={false}>
