@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -38,11 +38,12 @@ import { supabase } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { PhoneInput } from "@/components/PhoneInput";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { normalizePhone, isValidMalaysianPhone } from "@/lib/utils/phoneNormalizer";
 import { PasswordChangeForm } from "@/components/PasswordChangeForm";
 import { ActiveSessionsManager } from "@/components/ActiveSessionsManager";
 import { SecurityLogViewer } from "@/components/SecurityLogViewer";
+import { ApiKeyRegenerationBanner } from "@/components/ApiKeyRegenerationBanner";
 
 // Form schemas
 const profileSchema = z.object({
@@ -62,10 +63,15 @@ type DpoFormValues = z.infer<typeof dpoSchema>;
 export default function Settings() {
   const { user, profile, tenant, role } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [showApiKey, setShowApiKey] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
 
   const isAdmin = role === "clinic_admin" || role === "super_admin";
+  const isSuperAdmin = role === "super_admin";
+  
+  // Get default tab from URL query params
+  const defaultTab = searchParams.get("tab") || (isSuperAdmin ? "security" : "profile");
 
   // Fetch tenant details
   const { data: tenantData, isLoading: tenantLoading } = useQuery({
@@ -244,9 +250,6 @@ export default function Settings() {
     }
     return <Badge variant="outline">{status}</Badge>;
   };
-
-  // Super admins can access settings without tenant data
-  const isSuperAdmin = role === "super_admin";
   
   if (tenantLoading && !isSuperAdmin) {
     return (
@@ -267,6 +270,14 @@ export default function Settings() {
           <h1 className="text-3xl font-semibold">Settings</h1>
           <p className="text-muted-foreground mt-2">Manage your clinic settings and compliance information</p>
         </div>
+
+        {/* API Key Regeneration Banner - Only for non-super admins */}
+        {!isSuperAdmin && tenantData && (
+          <ApiKeyRegenerationBanner 
+            apiKeyHash={tenantData.api_key_hash} 
+            isAdmin={isAdmin}
+          />
+        )}
 
         {/* Custom Fields Link */}
         <Card className="hover:border-primary transition-colors cursor-pointer">
@@ -289,7 +300,7 @@ export default function Settings() {
         </Card>
 
         {/* Tabs */}
-        <Tabs defaultValue={isSuperAdmin ? "security" : "profile"} className="space-y-6">
+        <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-2' : 'grid-cols-4'}`}>
             {!isSuperAdmin && <TabsTrigger value="profile">Clinic Profile</TabsTrigger>}
             {!isSuperAdmin && <TabsTrigger value="pdpa">PDPA Compliance</TabsTrigger>}

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -58,6 +59,35 @@ Deno.serve(async (req) => {
     }
 
     console.log('Tenant created:', tenant.id);
+
+    // Step 1.5: Generate and hash API key for the new tenant
+    console.log('Generating API key for tenant:', tenant.id);
+    const randomBytes = new Uint8Array(32);
+    crypto.getRandomValues(randomBytes);
+    const newApiKey = `lh_${Array.from(randomBytes)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')}`;
+    
+    const salt = await bcrypt.genSalt(10);
+    const apiKeyHash = await bcrypt.hash(newApiKey, salt);
+    const apiKeyPrefix = newApiKey.substring(0, 8); // 'lh_' + first 5 hex chars
+    
+    // Update tenant with hashed API key
+    const { error: apiKeyError } = await supabaseAdmin
+      .from('tenants')
+      .update({
+        api_key_hash: apiKeyHash,
+        api_key_prefix: apiKeyPrefix,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', tenant.id);
+    
+    if (apiKeyError) {
+      console.error('Failed to set API key:', apiKeyError);
+      // Continue anyway - user can regenerate later
+    } else {
+      console.log('API key generated and hashed successfully');
+    }
 
     try {
       // Step 2: Create auth user with tenant_id in metadata
