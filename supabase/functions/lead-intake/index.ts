@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -80,6 +81,15 @@ const MAX_EMAIL_LENGTH = 255;
 const MAX_PHONE_LENGTH = 20;
 const MAX_NUMBER_VALUE = 999999999999; // 12 digits
 const MIN_NUMBER_VALUE = -999999999999;
+
+// Zod schema for core lead fields
+const leadCoreSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(100, "Name must be less than 100 characters"),
+  phone: z.string().min(1, "Phone is required"),
+  email: z.string().min(1, "Email is required").max(255, "Email must be less than 255 characters"),
+  consent: z.union([z.boolean(), z.string()]).optional(),
+  source: z.string().max(100, "Source too long").optional(),
+});
 
 // Email validation
 function isValidEmail(email: string): boolean {
@@ -601,7 +611,26 @@ serve(async (req) => {
       );
     }
 
-    // 7. Extract required fields and custom fields
+    // 7. Validate core fields with Zod
+    console.log('[lead-intake] Validating core fields with Zod');
+    const coreValidationResult = leadCoreSchema.safeParse(body);
+    
+    if (!coreValidationResult.success) {
+      const errors = coreValidationResult.error.format();
+      console.error('[lead-intake] Zod validation failed:', errors);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'Validation failed', 
+          details: errors
+        }), 
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('[lead-intake] Zod validation passed');
+
+    // 8. Extract required fields and custom fields
     const { name, phone, email, consent, source, ...extras } = body;
 
     // Check payload size for custom fields (max 64KB)
@@ -649,34 +678,7 @@ serve(async (req) => {
       }
     }
 
-    // Validate required fields
-    if (!name || !phone || !email) {
-      console.error('Missing required fields:', { name: !!name, phone: !!phone, email: !!email });
-      return new Response(
-        JSON.stringify({
-          error: 'Missing required fields',
-          required: ['name', 'phone', 'email'],
-          received: { name: !!name, phone: !!phone, email: !!email }
-        }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // Validate name length
-    if (name.trim().length < 2 || name.trim().length > 100) {
-      return new Response(
-        JSON.stringify({ error: 'Name must be between 2 and 100 characters' }),
-        { 
-          status: 400, 
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
-    }
-
-    // 8. Validate and normalize phone
+    // 9. Validate and normalize phone
     let normalizedPhone: string;
     try {
       normalizedPhone = normalizePhone(phone);
@@ -698,7 +700,7 @@ serve(async (req) => {
       );
     }
 
-    // 9. Validate email format
+    // 10. Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const trimmedEmail = email.toLowerCase().trim();
     
@@ -726,7 +728,7 @@ serve(async (req) => {
       );
     }
 
-    // 10. Check for duplicates (by phone or email)
+    // 11. Check for duplicates (by phone or email)
     const { data: existingLead } = await supabase
       .from('leads')
       .select('id')
@@ -751,7 +753,7 @@ serve(async (req) => {
 
     console.log(`Creating lead for tenant ${tenant.id}`);
 
-    // 11. Validate and sanitize custom fields (Phase 2: Enhanced Security)
+    // 12. Validate and sanitize custom fields (Phase 2: Enhanced Security)
     const validatedExtras: Record<string, unknown> = {};
     
     if (Object.keys(extras).length > 0) {
@@ -786,7 +788,7 @@ serve(async (req) => {
       console.log(`All custom fields validated and sanitized successfully`);
     }
 
-    // 12. Upsert custom properties (using validated extras)
+    // 13. Upsert custom properties (using validated extras)
     if (Object.keys(validatedExtras).length > 0) {
       try {
         await upsertProperties(supabase, tenant.id, 'lead', validatedExtras);
@@ -805,7 +807,7 @@ serve(async (req) => {
       }
     }
 
-    // 13. Sanitize and prepare custom fields for storage
+    // 14. Sanitize and prepare custom fields for storage
     const custom: Record<string, unknown> = {};
     for (const [rawKey, value] of Object.entries(validatedExtras)) {
       const key = sanitizeKey(rawKey);
@@ -816,7 +818,7 @@ serve(async (req) => {
 
     console.log(`Custom fields prepared: ${Object.keys(custom).length} fields`);
 
-    // 14. Insert lead with custom fields
+    // 15. Insert lead with custom fields
     const { data: lead, error: insertError } = await supabase
       .from('leads')
       .insert({
@@ -851,7 +853,7 @@ serve(async (req) => {
 
     console.log(`Lead created successfully: ${lead.id}`);
 
-    // 15. Log webhook event for audit trail
+    // 16. Log webhook event for audit trail
     await supabase.from('webhook_events').insert({
       tenant_id: tenant.id,
       source: source || 'api',
@@ -861,7 +863,7 @@ serve(async (req) => {
       ip_address: clientIp,
     });
 
-    // 16. Log audit entry
+    // 17. Log audit entry
     await supabase.from('audit_log').insert({
       tenant_id: tenant.id,
       user_id: null, // System/API action
@@ -876,7 +878,7 @@ serve(async (req) => {
       },
     });
 
-    // 17. Return success response
+    // 18. Return success response
     return new Response(
       JSON.stringify({
         success: true,
