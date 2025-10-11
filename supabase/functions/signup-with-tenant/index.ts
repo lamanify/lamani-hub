@@ -1,5 +1,42 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
-import * as bcrypt from "jsr:@da/bcrypt@1.0.1";
+
+// PBKDF2 Helper Function using Deno's native Web Crypto API
+async function hashApiKey(plaintext: string): Promise<string> {
+  // Generate a random salt (16 bytes)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  
+  // Convert plaintext to ArrayBuffer
+  const encoder = new TextEncoder();
+  const passwordData = encoder.encode(plaintext);
+  
+  // Import key material
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    passwordData,
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+  
+  // Derive key using PBKDF2 (100,000 iterations, SHA-256)
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    256 // Output 256 bits (32 bytes)
+  );
+  
+  // Convert salt and hash to hex
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  // Return in format: salt:hash
+  return `${saltHex}:${hashHex}`;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,8 +105,7 @@ Deno.serve(async (req) => {
       .map(b => b.toString(16).padStart(2, '0'))
       .join('')}`;
     
-    const salt = await bcrypt.genSalt(10);
-    const apiKeyHash = await bcrypt.hash(newApiKey, salt);
+    const apiKeyHash = await hashApiKey(newApiKey);
     const apiKeyPrefix = newApiKey.substring(0, 8); // 'lh_' + first 5 hex chars
     
     // Update tenant with hashed API key

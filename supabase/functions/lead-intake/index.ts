@@ -1,7 +1,52 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import * as bcrypt from "jsr:@da/bcrypt@1.0.1";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+
+// PBKDF2 Helper Function using Deno's native Web Crypto API
+async function verifyApiKey(plaintext: string, stored: string): Promise<boolean> {
+  try {
+    // Split stored value into salt and hash
+    const [saltHex, expectedHashHex] = stored.split(':');
+    if (!saltHex || !expectedHashHex) return false;
+    
+    // Convert hex salt back to Uint8Array
+    const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(byte => parseInt(byte, 16)));
+    
+    // Convert plaintext to ArrayBuffer
+    const encoder = new TextEncoder();
+    const passwordData = encoder.encode(plaintext);
+    
+    // Import key material
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      passwordData,
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits"]
+    );
+    
+    // Derive key using same parameters
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 100000,
+        hash: "SHA-256"
+      },
+      keyMaterial,
+      256
+    );
+    
+    // Convert derived bits to hex
+    const actualHashHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    // Constant-time comparison
+    return actualHashHex === expectedHashHex;
+  } catch (error) {
+    console.error('Error verifying API key:', error);
+    return false;
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -504,7 +549,7 @@ serve(async (req) => {
     for (const candidateTenant of tenants) {
       // Try current key first
       if (candidateTenant.api_key_hash) {
-        const currentKeyMatch = await bcrypt.compare(apiKey, candidateTenant.api_key_hash);
+        const currentKeyMatch = await verifyApiKey(apiKey, candidateTenant.api_key_hash);
         if (currentKeyMatch) {
           tenant = candidateTenant;
           console.log(`Tenant authenticated with current API key: ${tenant.name}`);
@@ -518,7 +563,7 @@ serve(async (req) => {
         const expiresAt = new Date(candidateTenant.old_api_key_expires_at);
         
         if (now < expiresAt) {
-          const oldKeyMatch = await bcrypt.compare(apiKey, candidateTenant.old_api_key_hash);
+          const oldKeyMatch = await verifyApiKey(apiKey, candidateTenant.old_api_key_hash);
           if (oldKeyMatch) {
             tenant = candidateTenant;
             usingOldKey = true;

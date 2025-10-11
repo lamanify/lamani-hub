@@ -1,6 +1,88 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import * as bcrypt from "jsr:@da/bcrypt@1.0.1";
+
+// PBKDF2 Helper Functions using Deno's native Web Crypto API
+async function hashApiKey(plaintext: string): Promise<string> {
+  // Generate a random salt (16 bytes)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  
+  // Convert plaintext to ArrayBuffer
+  const encoder = new TextEncoder();
+  const passwordData = encoder.encode(plaintext);
+  
+  // Import key material
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    passwordData,
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+  
+  // Derive key using PBKDF2 (100,000 iterations, SHA-256)
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: salt,
+      iterations: 100000,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    256 // Output 256 bits (32 bytes)
+  );
+  
+  // Convert salt and hash to hex
+  const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
+  const hashHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  // Return in format: salt:hash
+  return `${saltHex}:${hashHex}`;
+}
+
+async function verifyApiKey(plaintext: string, stored: string): Promise<boolean> {
+  try {
+    // Split stored value into salt and hash
+    const [saltHex, expectedHashHex] = stored.split(':');
+    if (!saltHex || !expectedHashHex) return false;
+    
+    // Convert hex salt back to Uint8Array
+    const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(byte => parseInt(byte, 16)));
+    
+    // Convert plaintext to ArrayBuffer
+    const encoder = new TextEncoder();
+    const passwordData = encoder.encode(plaintext);
+    
+    // Import key material
+    const keyMaterial = await crypto.subtle.importKey(
+      "raw",
+      passwordData,
+      { name: "PBKDF2" },
+      false,
+      ["deriveBits"]
+    );
+    
+    // Derive key using same parameters
+    const derivedBits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        salt: salt,
+        iterations: 100000,
+        hash: "SHA-256"
+      },
+      keyMaterial,
+      256
+    );
+    
+    // Convert derived bits to hex
+    const actualHashHex = Array.from(new Uint8Array(derivedBits)).map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    // Constant-time comparison
+    return actualHashHex === expectedHashHex;
+  } catch (error) {
+    console.error('Error verifying API key:', error);
+    return false;
+  }
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -91,12 +173,11 @@ serve(async (req) => {
     console.log(`Regenerating API key for tenant: ${profile.tenant_id}`);
     console.log(`Old key prefix: ${oldKeyPrefix}`);
 
-    // Hash the new API key using bcrypt (salt rounds: 10)
-    const salt = await bcrypt.genSalt(10);
-    const newApiKeyHash = await bcrypt.hash(newApiKey, salt);
+    // Hash the new API key using PBKDF2
+    const newApiKeyHash = await hashApiKey(newApiKey);
     const newApiKeyPrefix = newApiKey.substring(0, 8);
 
-    console.log(`New API key hashed with bcrypt (cost factor: 10)`);
+    console.log(`New API key hashed with PBKDF2 (100,000 iterations, SHA-256)`);
 
     // Grace period: move current hash to old_api_key_hash
     const gracePeriodMinutes = 60;
@@ -152,7 +233,7 @@ serve(async (req) => {
         warning: currentTenant?.api_key_hash 
           ? `Your old API key will remain valid for ${gracePeriodMinutes} minutes. Update your integrations before ${gracePeriodExpiresAt}.`
           : 'This is your first hashed API key. Store it securely - you will not be able to retrieve it again.',
-        security_note: 'API keys are now hashed with bcrypt for enhanced security. Only the hash is stored in the database.',
+        security_note: 'API keys are now hashed with PBKDF2 (100,000 iterations, SHA-256) for enhanced security. Only the hash is stored in the database.',
       }),
       { 
         status: 200, 
