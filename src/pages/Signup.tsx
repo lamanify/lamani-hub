@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
 import { Loader2, Database, MessageSquare, Shield, Clock, FileCheck, Upload } from "lucide-react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, supabaseUrl, supabaseAnonKey } from "@/lib/supabaseClient";
 import { mapSupabaseAuthError } from "@/utils/authErrors";
 const LOGO_URL = "https://www.lamanify.com/wp-content/uploads/2025/10/LamaniHub.webp";
 
@@ -132,21 +132,18 @@ export default function Signup() {
     try {
       // Call edge function first
       try {
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        
-        // Validate environment variables are loaded
-        if (!supabaseUrl || !supabaseKey) {
-          console.error('Environment variables not loaded:', { supabaseUrl, supabaseKey });
-          throw new Error('Configuration error: Environment variables not loaded. Please refresh the page and try again.');
-        }
+        console.log('Using Supabase config:', { 
+          url: supabaseUrl,
+          hasKey: !!supabaseAnonKey,
+          timestamp: new Date().toISOString()
+        });
         
         const response = await withTimeout(
           fetch(`${supabaseUrl}/functions/v1/signup-with-tenant`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              apikey: supabaseKey,
+              apikey: supabaseAnonKey,
             },
             body: JSON.stringify({
               clinicName: data.clinicName,
